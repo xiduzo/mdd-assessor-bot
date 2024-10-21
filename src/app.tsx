@@ -1,15 +1,17 @@
-import { Button } from "@/components/ui/button";
+import { Toaster } from "@/components/ui/sonner";
+import { Router } from "@/routes";
 import { createRoot } from "react-dom/client";
 
 function App() {
   return (
-    <div>
-      <h1 className="text-red-500">hello world</h1>
-      <Button>click me</Button>
-    </div>
+    <>
+      <Router />
+      <Toaster />
+    </>
   );
 }
 
-const app = document.createElement("root");
+const app = document.createElement("div");
+app.id = "root";
 document.body.appendChild(app);
 createRoot(app).render(<App />);
