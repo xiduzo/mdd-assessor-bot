@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from "electron";
+import { app, BrowserWindow, ipcMain } from "electron";
 import path from "path";
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
@@ -56,11 +56,27 @@ app.on("activate", () => {
   }
 });
 
-new PdfReader().parseFileItems(
-  "/Users/sander.boer/Downloads/MDD-Assessment-Criteria-2024-2025.pdf",
-  (err, item) => {
-    if (err) console.error("error:", err);
-    else if (!item) console.warn("end of file");
-    else if (item.text) console.log(item.text);
-  },
-);
+ipcMain.on("pdf-parse", (event, fileData) => {
+  const buffer = Buffer.from(fileData);
+
+  let data = "";
+  new PdfReader().parseBuffer(buffer, (error, item) => {
+    if (error) {
+      event.reply("upload-file-response", {
+        success: false,
+        error: error,
+      });
+      return;
+    }
+
+    if (!item) {
+      event.reply("upload-file-response", { success: true, data });
+      return;
+    }
+
+    if (item.text) {
+      data += item.text;
+      return;
+    }
+  });
+});

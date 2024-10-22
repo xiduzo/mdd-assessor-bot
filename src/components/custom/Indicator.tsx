@@ -1,6 +1,6 @@
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Competency, IndicatorLevel, indicatorLevels } from "@/lib/types";
+import { Competency, Grade, grades } from "@/lib/types";
 import { ProgressProps } from "@radix-ui/react-progress";
 import { cva } from "class-variance-authority";
 import {
@@ -13,13 +13,18 @@ import {
 } from "lucide-react";
 import { RefAttributes, useMemo } from "react";
 
-export function CompetencyDisplay(props: { competency: Competency }) {
+export function CompetencyDisplay(props: {
+  competency: Competency;
+  className?: string;
+}) {
   return (
-    <span className="inline-block first-letter:capitalize">
+    <span className={competencyDisplay({ className: props.className })}>
       {props.competency.replaceAll("-", " ")}
     </span>
   );
 }
+
+const competencyDisplay = cva("inline-block first-letter:capitalize");
 
 export function CompetencyIcon(
   props: { competency: Competency } & Omit<LucideProps, "ref"> &
@@ -46,7 +51,8 @@ export function CompetencyIconWithBackground(props: {
     <div
       className={competencyBackground({
         indicator: props.competency,
-        className: "w-10 h-10 rounded-lg flex items-center justify-center",
+        className:
+          "w-12 min-w-12 h-12 min-h-12 rounded-lg flex items-center justify-center",
       })}
     >
       <CompetencyIcon competency={props.competency} size={20} />
@@ -66,18 +72,18 @@ const competencyBackground = cva("", {
   },
 });
 
-export function IndicatorLevelProgress(props: { grade?: IndicatorLevel }) {
+export function IndicatorGradeProgress(props: { grade?: Grade }) {
   return (
     <section className="flex flex-col items-end space-y-1">
       <span className="text-neutral-400 text-xs first-letter:uppercase">
-        {props.grade ?? <Skeleton className="w-16 h-3" />}
+        {props.grade ?? <Skeleton className="w-16 h-4" />}
       </span>
       <section className="flex space-x-1">
-        {indicatorLevels.map((level) => (
-          <IndicatorLevelIndication
-            key={level}
-            level={level}
-            achievedLevel={props.grade}
+        {grades.map((grade) => (
+          <IndicatorGradeIndication
+            key={grade}
+            grade={grade}
+            achievedGrade={props.grade}
           />
         ))}
       </section>
@@ -85,34 +91,31 @@ export function IndicatorLevelProgress(props: { grade?: IndicatorLevel }) {
   );
 }
 
-function IndicatorLevelIndication(props: {
-  level: IndicatorLevel;
-  achievedLevel?: IndicatorLevel;
+function IndicatorGradeIndication(props: {
+  grade: Grade;
+  achievedGrade?: Grade;
 }) {
   const isActive = useMemo(() => {
-    if (!props.achievedLevel) return false;
+    if (!props.achievedGrade) return false;
 
-    return (
-      indicatorLevels.indexOf(props.level) <=
-      indicatorLevels.indexOf(props.achievedLevel)
-    );
-  }, [props.level, props.achievedLevel]);
+    return grades.indexOf(props.grade) <= grades.indexOf(props.achievedGrade);
+  }, [props.grade, props.achievedGrade]);
 
   return (
     <div
-      className={levelIndication({ level: props.achievedLevel, isActive })}
+      className={gradeIndication({ grade: props.achievedGrade, isActive })}
     ></div>
   );
 }
 
-const levelIndication = cva("w-6 h-2 bg-green-400 rounded-sm", {
+const gradeIndication = cva("w-6 h-2 bg-green-400 rounded-sm", {
   variants: {
-    level: {
+    grade: {
       undefined: "animate-pulse",
-      novice: "",
-      competent: "",
-      proficient: "",
-      visionary: "",
+      novice: "transition-colors duration-700",
+      competent: "transition-colors duration-700",
+      proficient: "transition-colors duration-700",
+      visionary: "transition-colors duration-700",
     },
     isActive: {
       true: "",
@@ -124,22 +127,22 @@ const levelIndication = cva("w-6 h-2 bg-green-400 rounded-sm", {
   },
   compoundVariants: [
     {
-      level: "novice",
+      grade: "novice",
       isActive: true,
       className: "bg-red-500",
     },
     {
-      level: "competent",
+      grade: "competent",
       isActive: true,
       className: "bg-yellow-500",
     },
     {
-      level: "proficient",
+      grade: "proficient",
       isActive: true,
       className: "bg-lime-500",
     },
     {
-      level: "visionary",
+      grade: "visionary",
       isActive: true,
       className: "bg-green-500",
     },

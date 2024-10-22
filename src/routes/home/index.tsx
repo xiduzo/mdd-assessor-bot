@@ -1,204 +1,206 @@
-import {
-  CompetencyDisplay,
-  CompetencyIconWithBackground,
-  IndicatorLevelProgress,
-} from "@/components/custom/Indicator";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  competenciesWithIncidactors,
-  CompetencyWithIndicators,
-} from "@/lib/types";
-import { ArrowLeft, ArrowRight, Copy } from "lucide-react";
-import Markdown from "react-markdown";
+  Card,
+  CardContent,
+  CardFooter,
+  CardHeader,
+} from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Progress } from "@/components/ui/progress";
+import { useLlm } from "@/providers/LlmProvider";
+import { File, Trash, UploadCloud } from "lucide-react";
+import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
+const uploadFileHint = "Upload a PDF file to see your results";
+const fileStates = [
+  "Uploading your masterpiece",
+  "Sending your PDF on a digital adventure",
+  "Finding competencies and indicators to grade",
+  "Turning your PDF into digital gold",
+  "Notifying the right authorities",
+  "Extracing all of your wisdoms",
+  "PDF is putting on its best suit",
+  "Extraxting every single byte for information",
+  "Just a moment, we're preparing the magic...",
+];
+
 export function HomeRoute() {
+  const navigate = useNavigate();
+  const { addStudentDocuments } = useLlm();
+  const [hint, setHint] = useState(uploadFileHint);
+  const [file, setFile] = useState<File>();
+  const [active, setActive] = useState(false);
+  const [fileState, setFileState] = useState(
+    fileStates[Math.floor(Math.random() * fileStates.length)],
+  );
+  const [progress, setProgress] = useState(0);
+
+  useEffect(() => {
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (event) {
+      const fileData = event.target?.result;
+      window.electron.ipcRenderer.send("pdf-parse", fileData, file.name);
+    };
+    reader.readAsArrayBuffer(file);
+
+    const interval = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          clearInterval(interval);
+
+          return 100;
+        }
+
+        if (prev % 10 === 0 && Math.random() > 0.5) {
+          setFileState(
+            fileStates[Math.floor(Math.random() * fileStates.length)],
+          );
+        }
+
+        return prev + 1;
+      });
+    }, 100);
+
+    window.electron.ipcRenderer.on(
+      "upload-file-response",
+      async (data: { success: boolean; data?: string; error?: string }) => {
+        if (!data.success || data.error) {
+          toast.warning(
+            data.error || "An error occurred while processing your file",
+          );
+          clearInterval(interval);
+          setFile(undefined);
+          return;
+        }
+
+        if (!data.data) {
+          toast.warning("No data found in the file");
+          clearInterval(interval);
+          setFile(undefined);
+          return;
+        }
+
+        toast.success("File processed successfully");
+        clearInterval(interval);
+        setProgress(100);
+        await addStudentDocuments([{ fileName: file.name, data: data.data }]);
+        navigate("/result", {
+          replace: true,
+        });
+      },
+    );
+
+    return () => clearInterval(interval);
+  }, [file, addStudentDocuments, navigate]);
+
   return (
-    <div className="p-4 min-h-lvh">
-      <h1 className="font-bold text-4xl">Let's review your portfolio 👀</h1>
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-center mb-6">Results</CardTitle>
-          {/* <section className="grid grid-cols-5 gap-8">
-            {indicators.map((indocator) => (
-              <Card key={indocator} className="text-center">
-                <CardHeader className="items-center py-3">
-                  <CompetencyIcon indicator={indocator} size={20} />
-                </CardHeader>
-                <CardContent className="pb-2">
-                  <CompetencyProgress
-                    indicator={indocator}
-                    value={60}
-                    className="h-3"
-                  />
-                </CardContent>
-                <CardFooter className="pb-2 text-xs">
-                  <span className="grow text-center first-letter:capitalize">
-                    {indocator.replaceAll("-", " ")}
-                  </span>
-                </CardFooter>
-              </Card>
-            ))}
-          </section> */}
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 gap-20">
-          {competenciesWithIncidactors.map((competenctWithIndicators) => (
-            <CompetencyResult
-              key={competenctWithIndicators.name}
-              competencyWithIndicators={competenctWithIndicators}
+    <main className="p-12 min-h-lvh text-center flex flex-col space-y-12">
+      <header className="flex flex-col items-center mt-12">
+        <div className="w-40 h-40 rounded-full bg-purple-400 animate-pulse mb-8"></div>
+        <h1 className="font-semibold text-4xl">
+          Let's review your portfolio 👀
+        </h1>
+      </header>
+      <section className="grow">
+        {!file && (
+          <section
+            className={`hover:bg-primary/5 transition-all max-h-72 min-h-36 h-[30vh] relative border-2 max-w-6xl mx-auto border-dashed border-primary rounded-lg flex items-center justify-center ${active ? "bg-primary/5" : ""}`}
+          >
+            <Label
+              htmlFor="file"
+              className="flex flex-col items-center justify-end space-y-2"
+            >
+              <UploadCloud className="bg-muted rounded-full w-12 h-12 p-3" />
+              <div>
+                <span>Click to upload</span> or drag and drop
+              </div>
+              <div>PDF (max. 1 GB)</div>
+            </Label>
+            <Input
+              id="file"
+              type="file"
+              accept="application/pdf"
+              className="absolute inset-0 h-full cursor-pointer opacity-0"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (!file) return;
+
+                if (file.type !== "application/pdf") {
+                  toast.warning("Please upload a PDF file");
+                  setHint(uploadFileHint);
+                  setActive(false);
+                  return;
+                }
+                const GIGABYTE = 1024 * 1024 * 1024;
+                if (file.size > GIGABYTE) {
+                  toast.warning("Your file is too large, max 1 GB");
+                  setHint(uploadFileHint);
+                  setActive(false);
+                  return;
+                }
+
+                setFile(file);
+                setHint("Processing file...");
+              }}
+              onDragEnter={() => {
+                setHint("Drop it like it's hot!");
+                setActive(true);
+              }}
+              onDragLeave={() => {
+                setHint(uploadFileHint);
+                setActive(false);
+              }}
             />
-          ))}
-        </CardContent>
-      </Card>
-    </div>
+          </section>
+        )}
+        {file && (
+          <Card>
+            <CardHeader className="flex flex-row items-start text-start space-x-6">
+              <section className="relative mt-2 flex items-center justify-center rounded-full">
+                <div className="absolute animate-ping bg-primary/20 w-7 h-7 rounded-full"></div>
+                <div className="absolute animate-pulse bg-primary/10 w-10 h-10 rounded-full"></div>
+                <File className="z-10" size={20} />
+              </section>
+              <section className="grow">
+                <h2 className="font-semibold">{file.name}</h2>
+                <div className="text-muted-foreground">
+                  {fileSizeToReadable(file.size)}
+                </div>
+              </section>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => {
+                  setFile(undefined);
+                  setHint(uploadFileHint);
+                }}
+              >
+                <Trash />
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <Progress value={progress} />
+            </CardContent>
+            <CardFooter className="animate-pulse">{fileState}</CardFooter>
+          </Card>
+        )}
+      </section>
+      <div className="text-muted-foreground">{hint}</div>
+    </main>
   );
 }
 
-const markdown = `# Feedback
-You demonstrate a good understanding of your individual contributions to the team, and you've evaluated how the team's efforts have contributed to your personal development. However, we'd like to see more concrete examples of how you've applied peer perspective to improve your teamwork approach.
-
-## Positives
-I appreciate that you've identified areas where your project could be improved, such as making it more emotionally impactful.
-
-## Areas for improvement
-While you mention exploring ways to make the project more emotionally impactful, we would have liked to see a more nuanced analysis of how this could be achieved in practice. Consider providing specific suggestions for how you would implement this in future projects.
-
-The student could also reflect on areas where they felt the team's efforts did not contribute to their personal development and how they would improve it in future projects.
-`;
-
-function CompetencyResult(props: {
-  competencyWithIndicators: CompetencyWithIndicators;
-}) {
-  return (
-    <section className="flex space-x-4">
-      <CompetencyIconWithBackground
-        competency={props.competencyWithIndicators.name}
-      />
-      <div className="grow">
-        <h2 className="font-bold mb-2">
-          <CompetencyDisplay competency={props.competencyWithIndicators.name} />
-        </h2>
-        <ol className="space-y-2">
-          {props.competencyWithIndicators.indicators.map((indicator) => (
-            <li key={indicator.name} className="flex space-x-4 items-center">
-              <div className="flex-grow">{indicator.name}</div>
-              <IndicatorLevelProgress grade={indicator.feedback?.grade} />
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="link" disabled={!indicator.feedback}>
-                    Read feedback
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-4xl">
-                  <DialogHeader>
-                    <DialogTitle className="flex space-x-4">
-                      <CompetencyIconWithBackground
-                        competency={props.competencyWithIndicators.name}
-                      />
-                      <div className="flex flex-col justify-between">
-                        <CompetencyDisplay
-                          competency={props.competencyWithIndicators.name}
-                        />
-                        <span className="text-sm font-light">
-                          {indicator.name}
-                        </span>
-                      </div>
-                    </DialogTitle>
-                  </DialogHeader>
-                  <DialogDescription>
-                    The feedback below is generated by a Large Langiage Model
-                    (LLM) and is inherently flawed. The feedback is meant as an
-                    initial starting point for your reflection, please refer to
-                    the teaching staff for proper feedback and guidance.
-                  </DialogDescription>
-                  <section className="flex space-x-8">
-                    <IndicatorLevelProgress grade="visionary" />
-                    <ScrollArea className="max-h-[55vh]">
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        className="absolute right-4 top-0"
-                        onClick={() => {
-                          navigator.clipboard.writeText(`
-========================
-⚠️ Disclaimer ⚠️
-The feedback below is generated by a Large Langiage Model
-(LLM) and is inherently flawed. The feedback is meant as an
-initial starting point for your reflection, please refer to
-the teaching staff for proper feedback and guidance.
-========================
-
-Feedback generated on 31/03/1994 23:04 using ollama3
-
-------------------------
-${props.competencyWithIndicators.name.replaceAll("-", " ")} - ${indicator}
-------------------------
-
-${markdown}`);
-                          toast.success("Feedback copied to clipboard");
-                        }}
-                      >
-                        <Copy />
-                      </Button>
-                      <Markdown
-                        components={{
-                          h1: ({ children }) => (
-                            <h1 className="font-bold text-xl">{children}</h1>
-                          ),
-                          h2: ({ children }) => (
-                            <h2 className="font-semibold mt-4 text-lg">
-                              {children}
-                            </h2>
-                          ),
-                          p: ({ children }) => (
-                            <p className="mb-0.5">{children}</p>
-                          ),
-                          ul: ({ children }) => (
-                            <ul className="list-disc list-inside">
-                              {children}
-                            </ul>
-                          ),
-                          ol: ({ children }) => (
-                            <ol className="list-decimal list-inside">
-                              {children}
-                            </ol>
-                          ),
-                        }}
-                      >
-                        {markdown}
-                      </Markdown>
-                    </ScrollArea>
-                  </section>
-                  <div className="mt-3 italic text-muted-foreground text-center text-xs">
-                    Feedback generated using ollama3 at 31/03/1994 23:04
-                  </div>
-                  <DialogFooter className="grid grid-cols-2">
-                    <Button variant="outline">
-                      <ArrowLeft />
-                      Previous disciplinary
-                    </Button>
-                    <Button>
-                      Next disciplinary
-                      <ArrowRight />
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
-            </li>
-          ))}
-        </ol>
-      </div>
-    </section>
-  );
+function fileSizeToReadable(size: number) {
+  const units = ["B", "KB", "MB", "GB", "TB"];
+  let unitIndex = 0;
+  while (size > 1024 && unitIndex < units.length) {
+    size /= 1024;
+    unitIndex++;
+  }
+  return `${size.toFixed(2)} ${units[unitIndex]}`;
 }

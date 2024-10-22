@@ -12,7 +12,7 @@ function App() {
           <Router />
         </LlmProvider>
       </FeedbackProvider>
-      <Toaster />
+      <Toaster pauseWhenPageIsHidden />
     </>
   );
 }

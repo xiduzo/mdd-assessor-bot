@@ -1,12 +1,12 @@
 import { z } from "zod";
 
-export const indicatorLevels = [
+export const grades = [
   "novice",
   "competent",
   "proficient",
   "visionary",
 ] as const;
-export type IndicatorLevel = (typeof indicatorLevels)[number];
+export type Grade = (typeof grades)[number];
 
 export const competencies = [
   "self-directed-learning",
@@ -19,12 +19,19 @@ export type Competency = (typeof competencies)[number];
 
 export const feedback = z
   .object({
-    grade: z.enum(indicatorLevels),
+    grade: z
+      .string()
+      .transform((val) => val.toLowerCase() as Grade)
+      .refine((val) => grades.includes(val as Grade), {
+        message: "Invalid enum value",
+      }),
   })
   .passthrough();
 
+export type Feedback = z.infer<typeof feedback>;
+
 const indicatorWithGrade = z.object({
-  grade: z.enum(indicatorLevels),
+  grade: z.enum(grades).transform((val) => val.toLowerCase() as Grade),
   expectations: z.string().array(),
 });
 
