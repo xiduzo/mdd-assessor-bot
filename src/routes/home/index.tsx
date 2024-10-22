@@ -1,19 +1,10 @@
 import {
-  Indicator,
-  IndicatorIconWithBackground,
-  IndicatorLevel,
-  IndicatorProgress,
-  indicators,
-  IndictorIcon,
+  CompetencyDisplay,
+  CompetencyIconWithBackground,
+  IndicatorLevelProgress,
 } from "@/components/custom/Indicator";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
@@ -24,8 +15,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  competenciesWithIncidactors,
+  CompetencyWithIndicators,
+} from "@/lib/types";
 import { ArrowLeft, ArrowRight, Copy } from "lucide-react";
-import { useMemo } from "react";
 import Markdown from "react-markdown";
 import { toast } from "sonner";
 
@@ -36,14 +30,14 @@ export function HomeRoute() {
       <Card>
         <CardHeader>
           <CardTitle className="text-center mb-6">Results</CardTitle>
-          <section className="grid grid-cols-5 gap-8">
+          {/* <section className="grid grid-cols-5 gap-8">
             {indicators.map((indocator) => (
               <Card key={indocator} className="text-center">
                 <CardHeader className="items-center py-3">
-                  <IndictorIcon indicator={indocator} size={20} />
+                  <CompetencyIcon indicator={indocator} size={20} />
                 </CardHeader>
                 <CardContent className="pb-2">
-                  <IndicatorProgress
+                  <CompetencyProgress
                     indicator={indocator}
                     value={60}
                     className="h-3"
@@ -56,11 +50,14 @@ export function HomeRoute() {
                 </CardFooter>
               </Card>
             ))}
-          </section>
+          </section> */}
         </CardHeader>
         <CardContent className="grid grid-cols-2 gap-20">
-          {indicators.map((indicator) => (
-            <IndicatorResult key={indicator} indicator={indicator} />
+          {competenciesWithIncidactors.map((competenctWithIndicators) => (
+            <CompetencyResult
+              key={competenctWithIndicators.name}
+              competencyWithIndicators={competenctWithIndicators}
+            />
           ))}
         </CardContent>
       </Card>
@@ -69,71 +66,53 @@ export function HomeRoute() {
 }
 
 const markdown = `# Feedback
-lorum ipsum dolor sit amet, consectetur adipiscing elit. Nullam nec purus nec nunc. lorum ipsum dolor sit amet, consectetur adipiscing elit. Nullam nec purus nec nunc. lorum ipsum dolor sit amet, consectetur adipiscing elit. Nullam nec purus nec nunc. lorum ipsum dolor sit amet, consectetur adipiscing elit. Nullam nec purus nec nunc.
+You demonstrate a good understanding of your individual contributions to the team, and you've evaluated how the team's efforts have contributed to your personal development. However, we'd like to see more concrete examples of how you've applied peer perspective to improve your teamwork approach.
 
 ## Positives
-lorum ipsum dolor sit amet, consectetur adipiscing elit. Nullam nec purus nec nunc. lorum ipsum dolor sit amet,
-
-lorum ipsum dolor sit amet, consectetur adipiscing elit. Nullam nec purus nec nunc. lorum ipsum dolor sit amet,
+I appreciate that you've identified areas where your project could be improved, such as making it more emotionally impactful.
 
 ## Areas for improvement
-- test 1
-- test 2
+While you mention exploring ways to make the project more emotionally impactful, we would have liked to see a more nuanced analysis of how this could be achieved in practice. Consider providing specific suggestions for how you would implement this in future projects.
 
-1. test 1
-2. test 2
-- test 1
-- test 2
+The student could also reflect on areas where they felt the team's efforts did not contribute to their personal development and how they would improve it in future projects.
+`;
 
-1. test 1
-2. test 2
-- test 1
-- test 2
-
-1. test 1
-2. test 2
-- test 1
-- test 2
-
-1. test 1
-2. test 2`;
-
-function IndicatorResult(props: { indicator: Indicator }) {
-  const items = useMemo(() => {
-    return [
-      "1.1 World view",
-      "1.2 Personal perspective",
-      "1.3 Peer perspective",
-    ];
-  }, []);
-
+function CompetencyResult(props: {
+  competencyWithIndicators: CompetencyWithIndicators;
+}) {
   return (
-    <section className="flex space-x-6">
-      <IndicatorIconWithBackground indicator={props.indicator} />
+    <section className="flex space-x-4">
+      <CompetencyIconWithBackground
+        competency={props.competencyWithIndicators.name}
+      />
       <div className="grow">
-        <h2 className="font-bold mb-2 first-letter:capitalize">
-          {props.indicator.replaceAll("-", " ")}
+        <h2 className="font-bold mb-2">
+          <CompetencyDisplay competency={props.competencyWithIndicators.name} />
         </h2>
         <ol className="space-y-2">
-          {items.map((item) => (
-            <li key={item} className="flex space-x-4 items-center">
-              <div className="flex-grow">{item}</div>
-              <IndicatorLevel level="visionary" />
+          {props.competencyWithIndicators.indicators.map((indicator) => (
+            <li key={indicator.name} className="flex space-x-4 items-center">
+              <div className="flex-grow">{indicator.name}</div>
+              <IndicatorLevelProgress grade={indicator.feedback?.grade} />
               <Dialog>
                 <DialogTrigger asChild>
-                  <Button variant="link">Read feedback</Button>
+                  <Button variant="link" disabled={!indicator.feedback}>
+                    Read feedback
+                  </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-4xl">
                   <DialogHeader>
                     <DialogTitle className="flex space-x-4">
-                      <IndicatorIconWithBackground
-                        indicator={props.indicator}
+                      <CompetencyIconWithBackground
+                        competency={props.competencyWithIndicators.name}
                       />
                       <div className="flex flex-col justify-between">
-                        <span className="first-letter:uppercase">
-                          {props.indicator.replaceAll("-", " ")}
+                        <CompetencyDisplay
+                          competency={props.competencyWithIndicators.name}
+                        />
+                        <span className="text-sm font-light">
+                          {indicator.name}
                         </span>
-                        <span className="text-sm font-light">{item}</span>
                       </div>
                     </DialogTitle>
                   </DialogHeader>
@@ -144,7 +123,7 @@ function IndicatorResult(props: { indicator: Indicator }) {
                     the teaching staff for proper feedback and guidance.
                   </DialogDescription>
                   <section className="flex space-x-8">
-                    <IndicatorLevel level="visionary" />
+                    <IndicatorLevelProgress grade="visionary" />
                     <ScrollArea className="max-h-[55vh]">
                       <Button
                         variant="outline"
@@ -163,7 +142,7 @@ the teaching staff for proper feedback and guidance.
 Feedback generated on 31/03/1994 23:04 using ollama3
 
 ------------------------
-${props.indicator.replaceAll("-", " ")} - ${item}
+${props.competencyWithIndicators.name.replaceAll("-", " ")} - ${indicator}
 ------------------------
 
 ${markdown}`);

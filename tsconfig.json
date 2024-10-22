@@ -10,6 +10,7 @@
     "baseUrl": ".",
     "outDir": "dist",
     "jsx": "react-jsx",
+    "strict": true,
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "paths": {

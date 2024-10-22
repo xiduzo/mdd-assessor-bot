@@ -1,4 +1,6 @@
 import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Competency, IndicatorLevel, indicatorLevels } from "@/lib/types";
 import { ProgressProps } from "@radix-ui/react-progress";
 import { cva } from "class-variance-authority";
 import {
@@ -11,28 +13,19 @@ import {
 } from "lucide-react";
 import { RefAttributes, useMemo } from "react";
 
-export const indicators = [
-  "self-directed-learning",
-  "concepting-and-ideation",
-  "reflection-and-awareness",
-  "framing-and-strategising",
-  "creating-and-crafting",
-] as const;
-export type Indicator = (typeof indicators)[number];
+export function CompetencyDisplay(props: { competency: Competency }) {
+  return (
+    <span className="inline-block first-letter:capitalize">
+      {props.competency.replaceAll("-", " ")}
+    </span>
+  );
+}
 
-const indicatorLevels = [
-  "novice",
-  "competent",
-  "proficient",
-  "visionary",
-] as const;
-type IndicatorLevel = (typeof indicatorLevels)[number];
-
-export function IndictorIcon(
-  props: { indicator: Indicator } & Omit<LucideProps, "ref"> &
+export function CompetencyIcon(
+  props: { competency: Competency } & Omit<LucideProps, "ref"> &
     RefAttributes<SVGSVGElement>,
 ) {
-  switch (props.indicator) {
+  switch (props.competency) {
     case "self-directed-learning":
       return <MoveUpRight {...props} />;
     case "concepting-and-ideation":
@@ -46,20 +39,22 @@ export function IndictorIcon(
   }
 }
 
-export function IndicatorIconWithBackground(props: { indicator: Indicator }) {
+export function CompetencyIconWithBackground(props: {
+  competency: Competency;
+}) {
   return (
     <div
-      className={indicatorBackground({
-        indicator: props.indicator,
+      className={competencyBackground({
+        indicator: props.competency,
         className: "w-10 h-10 rounded-lg flex items-center justify-center",
       })}
     >
-      <IndictorIcon indicator={props.indicator} size={20} />
+      <CompetencyIcon competency={props.competency} size={20} />
     </div>
   );
 }
 
-const indicatorBackground = cva("", {
+const competencyBackground = cva("", {
   variants: {
     indicator: {
       "self-directed-learning": "bg-yellow-100",
@@ -71,18 +66,18 @@ const indicatorBackground = cva("", {
   },
 });
 
-export function IndicatorLevel(props: { level: IndicatorLevel }) {
+export function IndicatorLevelProgress(props: { grade?: IndicatorLevel }) {
   return (
     <section className="flex flex-col items-end space-y-1">
-      <span className="text-muted-foreground text-xs first-letter:uppercase">
-        {props.level}
+      <span className="text-neutral-400 text-xs first-letter:uppercase">
+        {props.grade ?? <Skeleton className="w-16 h-3" />}
       </span>
       <section className="flex space-x-1">
         {indicatorLevels.map((level) => (
           <IndicatorLevelIndication
             key={level}
             level={level}
-            achievedLevel={props.level}
+            achievedLevel={props.grade}
           />
         ))}
       </section>
@@ -92,9 +87,11 @@ export function IndicatorLevel(props: { level: IndicatorLevel }) {
 
 function IndicatorLevelIndication(props: {
   level: IndicatorLevel;
-  achievedLevel: IndicatorLevel;
+  achievedLevel?: IndicatorLevel;
 }) {
   const isActive = useMemo(() => {
+    if (!props.achievedLevel) return false;
+
     return (
       indicatorLevels.indexOf(props.level) <=
       indicatorLevels.indexOf(props.achievedLevel)
@@ -103,45 +100,71 @@ function IndicatorLevelIndication(props: {
 
   return (
     <div
-      className={levelIndicator({ level: props.achievedLevel, isActive })}
+      className={levelIndication({ level: props.achievedLevel, isActive })}
     ></div>
   );
 }
 
-const levelIndicator = cva("w-6 h-2 bg-green-400 rounded-sm", {
+const levelIndication = cva("w-6 h-2 bg-green-400 rounded-sm", {
   variants: {
     level: {
-      novice: "bg-red-500",
-      competent: "bg-yellow-500",
-      proficient: "bg-lime-500",
-      visionary: "bg-green-500",
+      undefined: "animate-pulse",
+      novice: "",
+      competent: "",
+      proficient: "",
+      visionary: "",
     },
     isActive: {
       true: "",
       false: "bg-neutral-300",
     },
   },
+  defaultVariants: {
+    isActive: false,
+  },
+  compoundVariants: [
+    {
+      level: "novice",
+      isActive: true,
+      className: "bg-red-500",
+    },
+    {
+      level: "competent",
+      isActive: true,
+      className: "bg-yellow-500",
+    },
+    {
+      level: "proficient",
+      isActive: true,
+      className: "bg-lime-500",
+    },
+    {
+      level: "visionary",
+      isActive: true,
+      className: "bg-green-500",
+    },
+  ],
 });
 
-export function IndicatorProgress(
+export function CompetencyProgress(
   props: {
-    indicator: Indicator;
+    competency: Competency;
   } & Omit<ProgressProps & React.RefAttributes<HTMLDivElement>, "ref">,
 ) {
   return (
     <Progress
       {...props}
-      className={indicatorProgress({
-        indicator: props.indicator,
+      className={competencyProgress({
+        competency: props.competency,
         className: props.className,
       })}
     />
   );
 }
 
-const indicatorProgress = cva("", {
+const competencyProgress = cva("", {
   variants: {
-    indicator: {
+    competency: {
       "self-directed-learning": "[&>*]:bg-yellow-100",
       "concepting-and-ideation": "[&>*]:bg-pink-200",
       "reflection-and-awareness": "[&>*]:bg-violet-200",

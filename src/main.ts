@@ -1,5 +1,8 @@
 import { app, BrowserWindow } from "electron";
 import path from "path";
+// In this file you can include the rest of your app's specific main process
+// code. You can also put them in separate files and import them here.
+import { PdfReader } from "pdfreader";
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (require("electron-squirrel-startup")) {
@@ -53,5 +56,11 @@ app.on("activate", () => {
   }
 });
 
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and import them here.
+new PdfReader().parseFileItems(
+  "/Users/sander.boer/Downloads/MDD-Assessment-Criteria-2024-2025.pdf",
+  (err, item) => {
+    if (err) console.error("error:", err);
+    else if (!item) console.warn("end of file");
+    else if (item.text) console.log(item.text);
+  },
+);
