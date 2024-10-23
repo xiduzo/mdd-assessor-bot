@@ -1,6 +1,6 @@
 import {
   CompetencyIconWithBackground,
-  IndicatorGradeProgress
+  IndicatorGradeProgress,
 } from "@/components/custom/Indicator";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +9,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,7 +18,7 @@ import {
   Competency,
   CompetencyWithIndicators,
   Feedback,
-  Indicator
+  Indicator,
 } from "@/lib/types";
 import { jsonToMarkdown } from "@/lib/utils";
 import { ArrowLeft, ArrowRight, Copy } from "lucide-react";
@@ -28,7 +28,7 @@ import {
   useCallback,
   useContext,
   useMemo,
-  useState
+  useState,
 } from "react";
 import Markdown from "react-markdown";
 import { toast } from "sonner";
@@ -87,7 +87,7 @@ export function FeedbackProvider(props: PropsWithChildren) {
   const clearFeedback = useCallback(() => {
     setState((prev) => {
       const next = [...prev];
-      next.forEach(({indicators}) => {
+      next.forEach(({ indicators }) => {
         indicators.forEach((indicator) => {
           indicator.feedback = undefined;
         });
@@ -106,7 +106,7 @@ export function FeedbackProvider(props: PropsWithChildren) {
         competenciesWithIncidactors: state,
         setFeedback,
         showFeedback,
-        clearFeedback
+        clearFeedback,
       }}
     >
       {props.children}
@@ -173,13 +173,12 @@ function FeedbackDialog(props: {
               disabled={!props.indicator.feedback}
               onClick={async () => {
                 setFeedback(props.competency, props.indicator.name);
-                await getGrading(props.competency, props.indicator);
+                getGrading(props.competency, props.indicator);
               }}
             >
               Regenerate feedback
             </Button>
           </section>
-
           <ScrollArea className="max-h-[55vh] grow">
             {!props.indicator.feedback && (
               <section className="h-60">

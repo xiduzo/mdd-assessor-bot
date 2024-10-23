@@ -230,6 +230,7 @@ export function LlmProvider(props: PropsWithChildren) {
       indicator: Pick<Indicator, "name">,
       triesLeft = 20, // TODO: this mostly fails because the `grade` is not present in the resonse, a better prompt will help
     ) => {
+      if (!documents.length) return;
       while (!runnable.current) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
@@ -267,7 +268,7 @@ export function LlmProvider(props: PropsWithChildren) {
         await getGrading(competency, indicator, triesLeft - 1);
       }
     },
-    [runnable.current, setFeedback],
+    [runnable.current, setFeedback, documents],
   );
 
   const initialize = useCallback(async () => {

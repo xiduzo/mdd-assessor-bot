@@ -111,7 +111,7 @@ export function HomeRoute() {
           <div className="text-muted-foreground">Drop it like its hot</div>
         )}
       </section>
-      <section>
+      <section className="flex flex-col items-center space-y-12">
         <Button
           disabled={!documents.length || status !== "initialized"}
           onClick={() => {
@@ -122,6 +122,13 @@ export function HomeRoute() {
           {!documents.length && "Upload documents to start analyzing"}
           {!!documents.length && "Start analyzing"}
         </Button>
+        <a
+          href="https://sanderboer.nl"
+          target="_blank"
+          className="text-muted-foreground"
+        >
+          Made with ♥️ by xiduzo
+        </a>
       </section>
     </article>
   );

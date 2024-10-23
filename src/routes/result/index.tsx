@@ -13,37 +13,39 @@ import {
 import { Competency, CompetencyWithIndicators, Indicator } from "@/lib/types";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { useLlm } from "@/providers/LlmProvider";
+import { RotateCcw } from "lucide-react";
 import { useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 export function ResultRoute() {
-  const { competenciesWithIncidactors } = useFeedback();
+  const { documents } = useLlm();
+  const navigate = useNavigate();
+
+  const { competenciesWithIncidactors, clearFeedback } = useFeedback();
+
+  useEffect(() => {
+    if(documents.length) return
+
+    navigate("/")
+  }, [documents, navigate])
   return (
     <article>
       <Card>
         <CardHeader>
-          <CardTitle>Feedback</CardTitle>
-          <CardDescription>foo bar baz?</CardDescription>
-          {/* <section className="grid grid-cols-5 gap-8">
-            {indicators.map((indocator) => (
-              <Card key={indocator} className="text-center">
-                <CardHeader className="items-center py-3">
-                  <CompetencyIcon indicator={indocator} size={20} />
-                </CardHeader>
-                <CardContent className="pb-2">
-                  <CompetencyProgress
-                    indicator={indocator}
-                    value={60}
-                    className="h-3"
-                  />
-                </CardContent>
-                <CardFooter className="pb-2 text-xs">
-                  <span className="grow text-center first-letter:capitalize">
-                    {indocator}
-                  </span>
-                </CardFooter>
-              </Card>
-            ))}
-          </section> */}
+          <CardTitle className="flex items-center justify-between">
+            Feedback
+            <Button
+              disabled={!documents.length}
+              variant="ghost"
+              size="icon"
+              onClick={() => clearFeedback()}
+            >
+              <RotateCcw />
+            </Button>
+          </CardTitle>
+          <CardDescription>
+            <em>/ˈfiːd.bæk/</em>
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid lg:grid-cols-2 grid-cols-1 lg:gap-12 gap-8">
           {competenciesWithIncidactors.map((competenctWithIndicators) => (
@@ -100,13 +102,7 @@ function CompetencyIndicator(props: {
     if (props.indicator.feedback) return;
 
     getGrading(props.competency, { name: props.indicator.name });
-
-  }, [
-    props.indicator.feedback,
-    props.competency,
-    status,
-    getGrading,
-  ]);
+  }, [props.indicator.feedback, props.competency, status, getGrading]);
 
   return (
     <li key={props.indicator.name} className="flex space-x-4 items-center">
