@@ -1,7 +1,6 @@
 import {
-  CompetencyDisplay,
   CompetencyIconWithBackground,
-  IndicatorGradeProgress,
+  IndicatorGradeProgress
 } from "@/components/custom/Indicator";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,15 +9,16 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
+  DialogTitle
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   competenciesWithIncidactors,
   Competency,
   CompetencyWithIndicators,
   Feedback,
-  Indicator,
+  Indicator
 } from "@/lib/types";
 import { jsonToMarkdown } from "@/lib/utils";
 import { ArrowLeft, ArrowRight, Copy } from "lucide-react";
@@ -28,25 +28,29 @@ import {
   useCallback,
   useContext,
   useMemo,
-  useState,
+  useState
 } from "react";
 import Markdown from "react-markdown";
 import { toast } from "sonner";
+import { useCopyToClipboard } from "usehooks-ts";
+import { useLlm } from "./LlmProvider";
 
 type FeedbackContextType = {
   competenciesWithIncidactors: CompetencyWithIndicators[];
-  addFeedback: (
+  setFeedback: (
     competency: Competency,
     indicator: string,
-    feedback: Feedback,
+    feedback?: Feedback,
   ) => void;
   showFeedback: (indicator?: Indicator) => void;
+  clearFeedback: () => void;
 };
 
 const FeedbackContext = createContext<FeedbackContextType>({
   competenciesWithIncidactors: competenciesWithIncidactors,
-  addFeedback: () => undefined,
+  setFeedback: () => undefined,
   showFeedback: () => undefined,
+  clearFeedback: () => undefined,
 });
 
 export function FeedbackProvider(props: PropsWithChildren) {
@@ -61,8 +65,8 @@ export function FeedbackProvider(props: PropsWithChildren) {
     )?.name;
   }, [selectedFeedback, state]);
 
-  const addFeedback = useCallback(
-    (competency: Competency, indicator: string, feedback: Feedback) => {
+  const setFeedback = useCallback(
+    (competency: Competency, indicator: string, feedback?: Feedback) => {
       setState((prev) => {
         const competencyIndex = prev.findIndex((c) => c.name === competency);
         if (competencyIndex < 0) return prev;
@@ -80,6 +84,18 @@ export function FeedbackProvider(props: PropsWithChildren) {
     [],
   );
 
+  const clearFeedback = useCallback(() => {
+    setState((prev) => {
+      const next = [...prev];
+      next.forEach(({indicators}) => {
+        indicators.forEach((indicator) => {
+          indicator.feedback = undefined;
+        });
+      });
+      return next;
+    });
+  }, []);
+
   const showFeedback = useCallback((indicator?: Indicator) => {
     setSelectedFeedback(indicator);
   }, []);
@@ -88,8 +104,9 @@ export function FeedbackProvider(props: PropsWithChildren) {
     <FeedbackContext.Provider
       value={{
         competenciesWithIncidactors: state,
-        addFeedback,
+        setFeedback,
         showFeedback,
+        clearFeedback
       }}
     >
       {props.children}
@@ -118,7 +135,10 @@ function FeedbackDialog(props: {
   competency: Competency;
   indicator: Indicator;
 }) {
-  const { showFeedback } = useFeedback();
+  const { showFeedback, setFeedback } = useFeedback();
+  const { getGrading } = useLlm();
+  const [, copy] = useCopyToClipboard();
+
   const mardownFeedback = useMemo(() => {
     return jsonToMarkdown(props.indicator.feedback);
   }, [props.indicator.feedback]);
@@ -135,10 +155,9 @@ function FeedbackDialog(props: {
           <DialogTitle className="flex space-x-4">
             <CompetencyIconWithBackground competency={props.competency} />
             <div className="flex flex-col justify-between">
-              <CompetencyDisplay
-                competency={props.competency}
-                className="text-xl"
-              />
+              <div className="text-xl first-letter:capitalize">
+                {props.competency}
+              </div>
               <span className="text-sm font-light text-muted-foreground">
                 {props.indicator.name}
               </span>
@@ -147,14 +166,44 @@ function FeedbackDialog(props: {
         </DialogHeader>
         <DialogDescription>{disclaimer}</DialogDescription>
         <section className="flex space-x-8">
-          <IndicatorGradeProgress grade={props.indicator.feedback?.grade} />
+          <section className="space-y-4">
+            <IndicatorGradeProgress grade={props.indicator.feedback?.grade} />
+            <Button
+              variant="ghost"
+              disabled={!props.indicator.feedback}
+              onClick={async () => {
+                setFeedback(props.competency, props.indicator.name);
+                await getGrading(props.competency, props.indicator);
+              }}
+            >
+              Regenerate feedback
+            </Button>
+          </section>
+
           <ScrollArea className="max-h-[55vh] grow">
+            {!props.indicator.feedback && (
+              <section className="h-60">
+                <Skeleton className="w-36 h-7 mb-2" />
+
+                <Skeleton className="w-[90%] h-4 mb-1" />
+                <Skeleton className="w-[85%] h-4 mb-1" />
+                <Skeleton className="w-[93%] h-4 mb-1" />
+                <Skeleton className="w-[60%] h-4 mb-1" />
+
+                <Skeleton className="w-64 h-6 mt-5 mb-2" />
+                <Skeleton className="w-[90%] h-4 mb-1" />
+                <Skeleton className="w-[95%] h-4 mb-1" />
+                <Skeleton className="w-[85%] h-4 mb-1" />
+                <Skeleton className="w-[25%] h-4 mb-1" />
+              </section>
+            )}
             <Button
               variant="outline"
               size="icon"
-              className="absolute right-0 top-0"
-              onClick={() => {
-                navigator.clipboard.writeText(`
+              disabled={!props.indicator.feedback}
+              className="absolute right-0 top-0 z-50"
+              onClick={async () => {
+                const isCopied = await copy(`
 ========================
 ⚠️ Disclaimer ⚠️
 ${disclaimer}
@@ -163,11 +212,15 @@ ${disclaimer}
 Feedback generated on 31/03/1994 23:04 using ollama3
 
 ------------------------
-${props.competency.replaceAll("-", " ")} - ${props.indicator.name}
+${props.competency} - ${props.indicator.name}
 ------------------------
 
 ${mardownFeedback}`);
-                toast.success("Feedback copied to clipboard");
+                if (isCopied) {
+                  toast.success("Feedback copied to clipboard");
+                } else {
+                  toast.warning("Failed to copy feedback to clipboard");
+                }
               }}
             >
               <Copy />

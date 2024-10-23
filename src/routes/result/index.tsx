@@ -1,10 +1,15 @@
 import {
-  CompetencyDisplay,
   CompetencyIconWithBackground,
-  IndicatorGradeProgress,
+  IndicatorGradeProgress
 } from "@/components/custom/Indicator";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle
+} from "@/components/ui/card";
 import { Competency, CompetencyWithIndicators, Indicator } from "@/lib/types";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { useLlm } from "@/providers/LlmProvider";
@@ -13,10 +18,11 @@ import { useEffect } from "react";
 export function ResultRoute() {
   const { competenciesWithIncidactors } = useFeedback();
   return (
-    <div className="p-4 min-h-lvh">
+    <article>
       <Card>
         <CardHeader>
-          <CardTitle className="text-center mb-6">Results</CardTitle>
+          <CardTitle>Feedback</CardTitle>
+          <CardDescription>foo bar baz?</CardDescription>
           {/* <section className="grid grid-cols-5 gap-8">
             {indicators.map((indocator) => (
               <Card key={indocator} className="text-center">
@@ -32,14 +38,14 @@ export function ResultRoute() {
                 </CardContent>
                 <CardFooter className="pb-2 text-xs">
                   <span className="grow text-center first-letter:capitalize">
-                    {indocator.replaceAll("-", " ")}
+                    {indocator}
                   </span>
                 </CardFooter>
               </Card>
             ))}
           </section> */}
         </CardHeader>
-        <CardContent className="grid lg:grid-cols-2 grid-cols-1 lg:gap-20 gap-12">
+        <CardContent className="grid lg:grid-cols-2 grid-cols-1 lg:gap-12 gap-8">
           {competenciesWithIncidactors.map((competenctWithIndicators) => (
             <CompetencyResult
               key={competenctWithIndicators.name}
@@ -48,7 +54,7 @@ export function ResultRoute() {
           ))}
         </CardContent>
       </Card>
-    </div>
+    </article>
   );
 }
 
@@ -58,14 +64,14 @@ function CompetencyResult(props: {
   return (
     <section
       className="flex space-x-4"
-      aria-label={props.competencyWithIndicators.name.replaceAll("-", " ")}
+      aria-label={props.competencyWithIndicators.name}
     >
       <CompetencyIconWithBackground
         competency={props.competencyWithIndicators.name}
       />
       <div className="grow">
-        <h2 className="font-bold">
-          <CompetencyDisplay competency={props.competencyWithIndicators.name} />
+        <h2 className="font-bold first-letter:capitalize">
+          {props.competencyWithIndicators.name}
         </h2>
         <ol className="space-y-2">
           {props.competencyWithIndicators.indicators.map((indicator) => (
@@ -87,13 +93,20 @@ function CompetencyIndicator(props: {
 }) {
   const { showFeedback } = useFeedback();
 
-  const { getGrading } = useLlm();
+  const { getGrading, status } = useLlm();
 
   useEffect(() => {
+    if (status !== "initialized") return;
     if (props.indicator.feedback) return;
 
     getGrading(props.competency, { name: props.indicator.name });
-  }, [props.indicator.feedback, props.competency]);
+
+  }, [
+    props.indicator.feedback,
+    props.competency,
+    status,
+    getGrading,
+  ]);
 
   return (
     <li key={props.indicator.name} className="flex space-x-4 items-center">

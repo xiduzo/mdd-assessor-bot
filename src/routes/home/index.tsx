@@ -1,115 +1,52 @@
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { useFeedback } from "@/providers/FeedbackProvider";
 import { useLlm } from "@/providers/LlmProvider";
-import { File, Trash, UploadCloud } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useAutoAnimate } from "@formkit/auto-animate/react";
+import { cva, VariantProps } from "class-variance-authority";
+import {
+  File,
+  FileCheck,
+  FileQuestion,
+  Trash,
+  UploadCloud,
+} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useInterval } from "usehooks-ts";
 
-const uploadFileHint = "Upload a PDF file to see your results";
-const fileStates = [
-  "Uploading your masterpiece",
-  "Sending your PDF on a digital adventure",
-  "Finding competencies and indicators to grade",
-  "Turning your PDF into digital gold",
-  "Notifying the right authorities",
-  "Extracing all of your wisdoms",
-  "PDF is putting on its best suit",
-  "Extraxting every single byte for information",
-  "Just a moment, we're preparing the magic...",
-];
+const MEGA_BYTE = 1024 * 1024;
+const MAX_FILE_SIZE_IN_MB = 50;
+const MAX_FILE_SIZE = MEGA_BYTE * MAX_FILE_SIZE_IN_MB;
 
 export function HomeRoute() {
+  const { documents, status } = useLlm();
+  const { clearFeedback } = useFeedback();
   const navigate = useNavigate();
-  const { addStudentDocuments } = useLlm();
-  const [hint, setHint] = useState(uploadFileHint);
-  const [file, setFile] = useState<File>();
+  const [files, setFiles] = useState<File[]>([]);
   const [active, setActive] = useState(false);
-  const [fileState, setFileState] = useState(
-    fileStates[Math.floor(Math.random() * fileStates.length)],
-  );
-  const [progress, setProgress] = useState(0);
+  const [autoAnimateRef] = useAutoAnimate();
 
-  useEffect(() => {
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = function (event) {
-      const fileData = event.target?.result;
-      window.electron.ipcRenderer.send("pdf-parse", fileData, file.name);
-    };
-    reader.readAsArrayBuffer(file);
-
-    const interval = setInterval(() => {
-      setProgress((prev) => {
-        if (prev >= 100) {
-          clearInterval(interval);
-
-          return 100;
-        }
-
-        if (prev % 10 === 0 && Math.random() > 0.5) {
-          setFileState(
-            fileStates[Math.floor(Math.random() * fileStates.length)],
-          );
-        }
-
-        return prev + 1;
-      });
-    }, 100);
-
-    window.electron.ipcRenderer.on(
-      "upload-file-response",
-      async (data: { success: boolean; data?: string; error?: string }) => {
-        if (!data.success || data.error) {
-          toast.warning(
-            data.error || "An error occurred while processing your file",
-          );
-          clearInterval(interval);
-          setFile(undefined);
-          return;
-        }
-
-        if (!data.data) {
-          toast.warning("No data found in the file");
-          clearInterval(interval);
-          setFile(undefined);
-          return;
-        }
-
-        toast.success("File processed successfully");
-        clearInterval(interval);
-        setProgress(100);
-        await addStudentDocuments([{ fileName: file.name, data: data.data }]);
-        navigate("/result", {
-          replace: true,
-        });
-      },
-    );
-
-    return () => clearInterval(interval);
-  }, [file, addStudentDocuments, navigate]);
+  const removeFile = useCallback(({ name }: File) => {
+    setFiles((prev) => prev.filter((file) => file.name !== name));
+  }, []);
 
   return (
-    <main className="p-12 min-h-lvh text-center flex flex-col space-y-12">
-      <header className="flex flex-col items-center mt-12">
-        <div className="w-40 h-40 rounded-full bg-purple-400 animate-pulse mb-8"></div>
+    <article className="text-center flex flex-col space-y-6 h-[85vh]">
+      <header className="flex flex-col items-center mt-0">
+        <div className="w-40 h-40 rounded-full bg-purple-400 animate-pulse mb-4"></div>
         <h1 className="font-semibold text-4xl">
-          Let's review your portfolio 👀
+          Let's review your documents 👀
         </h1>
       </header>
-      <section className="grow">
-        {!file && (
+      <section className="grow space-y-4">
+        {!files.length && (
           <section
-            className={`hover:bg-primary/5 transition-all max-h-72 min-h-36 h-[30vh] relative border-2 max-w-6xl mx-auto border-dashed border-primary rounded-lg flex items-center justify-center ${active ? "bg-primary/5" : ""}`}
+            className={`hover:bg-primary/5 transition-all max-h-72 min-h-24 h-[25vh] relative border-2 max-w-6xl mx-auto border-dashed border-primary rounded-lg flex items-center justify-center ${active ? "bg-primary/5" : ""}`}
           >
             <Label
               htmlFor="file"
@@ -117,85 +54,224 @@ export function HomeRoute() {
             >
               <UploadCloud className="bg-muted rounded-full w-12 h-12 p-3" />
               <div>
-                <span>Click to upload</span> or drag and drop
+                <span className="font-bold">Click to upload</span> or drag and
+                drop
               </div>
-              <div>PDF (max. 1 GB)</div>
+              <div className="text-muted-foreground">
+                PDF (max. {MAX_FILE_SIZE_IN_MB} MB)
+              </div>
             </Label>
             <Input
               id="file"
               type="file"
               accept="application/pdf"
+              multiple
               className="absolute inset-0 h-full cursor-pointer opacity-0"
               onChange={(event) => {
-                const file = event.target.files?.[0];
-                if (!file) return;
+                setActive(false);
+                if (!event.target.files?.length) return;
 
-                if (file.type !== "application/pdf") {
-                  toast.warning("Please upload a PDF file");
-                  setHint(uploadFileHint);
-                  setActive(false);
-                  return;
-                }
-                const GIGABYTE = 1024 * 1024 * 1024;
-                if (file.size > GIGABYTE) {
-                  toast.warning("Your file is too large, max 1 GB");
-                  setHint(uploadFileHint);
-                  setActive(false);
-                  return;
-                }
+                const newFiles = Array.from(event.target.files).filter(
+                  (file) => {
+                    if (file.type !== "application/pdf") {
+                      toast.warning(file.name, {
+                        description: "Only PDF files are allowed",
+                      });
+                      return;
+                    }
 
-                setFile(file);
-                setHint("Processing file...");
+                    if (file.size > MAX_FILE_SIZE) {
+                      toast.warning(file.name, {
+                        description: `Your file is too large (${readableByteSize(file.size)}), max ${MAX_FILE_SIZE_IN_MB} MB`,
+                      });
+                      return;
+                    }
+
+                    return file;
+                  },
+                );
+
+                setFiles(newFiles);
               }}
               onDragEnter={() => {
-                setHint("Drop it like it's hot!");
                 setActive(true);
               }}
               onDragLeave={() => {
-                setHint(uploadFileHint);
                 setActive(false);
               }}
             />
           </section>
         )}
-        {file && (
-          <Card>
-            <CardHeader className="flex flex-row items-start text-start space-x-6">
-              <section className="relative mt-2 flex items-center justify-center rounded-full">
-                <div className="absolute animate-ping bg-primary/20 w-7 h-7 rounded-full"></div>
-                <div className="absolute animate-pulse bg-primary/10 w-10 h-10 rounded-full"></div>
-                <File className="z-10" size={20} />
-              </section>
-              <section className="grow">
-                <h2 className="font-semibold">{file.name}</h2>
-                <div className="text-muted-foreground">
-                  {fileSizeToReadable(file.size)}
-                </div>
-              </section>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => {
-                  setFile(undefined);
-                  setHint(uploadFileHint);
-                }}
-              >
-                <Trash />
-              </Button>
-            </CardHeader>
-            <CardContent>
-              <Progress value={progress} />
-            </CardContent>
-            <CardFooter className="animate-pulse">{fileState}</CardFooter>
-          </Card>
+        <section className="space-y-2" ref={autoAnimateRef}>
+          {files.map((file) => (
+            <FileUploader key={file.name} file={file} removeFile={removeFile} />
+          ))}
+        </section>
+        {active && (
+          <div className="text-muted-foreground">Drop it like its hot</div>
         )}
       </section>
-      <div className="text-muted-foreground">{hint}</div>
-    </main>
+      <section>
+        <Button
+          disabled={!documents.length || status !== "initialized"}
+          onClick={() => {
+            clearFeedback();
+            navigate("/result");
+          }}
+        >
+          {!documents.length && "Upload documents to start analyzing"}
+          {!!documents.length && "Start analyzing"}
+        </Button>
+      </section>
+    </article>
   );
 }
 
-function fileSizeToReadable(size: number) {
+function FileUploader(props: { file: File; removeFile: (file: File) => void }) {
+  const { addStudentDocuments } = useLlm();
+
+  const [progress, setProgress] = useState(0);
+  const [uploadState, setUploadState] =
+    useState<FileUploaderCardProps["uploadState"]>("uploading");
+
+  useInterval(
+    () => {
+      setProgress((prev) => {
+        if (prev >= 100) {
+          return 100;
+        }
+
+        return Math.max(95, prev + Math.random() * 3);
+      });
+    },
+    uploadState === "uploading" ? 300 : null,
+  );
+
+  useEffect(() => {
+    const reader = new FileReader();
+    reader.onload = function (event) {
+      const fileData = event.target?.result;
+      window.electron.ipcRenderer.send("pdf-parse", fileData, props.file.name);
+    };
+    reader.readAsArrayBuffer(props.file);
+
+    window.electron.ipcRenderer.on(
+      "upload-file-response",
+      async (response: {
+        success: boolean;
+        data?: string;
+        error?: string;
+        fileName: string;
+      }) => {
+        if (props.file.name !== response.fileName) return;
+
+        if (!response.success || response.error) {
+          toast.warning(props.file.name, {
+            description:
+              response.error ?? "An error occurred while processing the file",
+          });
+          setUploadState("error");
+          return;
+        }
+
+        if (!response.data) {
+          toast.warning(props.file.name, {
+            description: "No data found in the file",
+          });
+          setUploadState("error");
+          return;
+        }
+
+        toast.success(props.file.name, {
+          description: "File uploaded successfully",
+        });
+
+        setProgress(100);
+        setUploadState("success");
+        await addStudentDocuments([
+          {
+            name: props.file.name,
+            lastModified: props.file.lastModified,
+            text: response.data ?? "",
+          },
+        ]);
+        props.removeFile(props.file);
+      },
+    );
+  }, [props.file, props.removeFile]);
+
+  return (
+    <Card className={fileUploaderCard({ uploadState: uploadState })}>
+      <CardHeader className="flex flex-row items-start text-start space-x-6 space-y-0">
+        <section className="relative mt-0.5 flex items-center justify-center rounded-full">
+          {uploadState === "uploading" && (
+            <div className="absolute animate-ping bg-primary/20 w-7 h-7 rounded-full"></div>
+          )}
+          {uploadState === "uploading" && (
+            <div className="absolute animate-pulse bg-primary/10 w-10 h-10 rounded-full"></div>
+          )}
+          {uploadState === "uploading" && <File className="z-10" size={20} />}
+          {uploadState === "success" && (
+            <FileCheck className="text-green-500" size={20} />
+          )}
+          {uploadState === "error" && (
+            <FileQuestion className="text-red-500" size={20} />
+          )}
+        </section>
+        <section className="grow">
+          <h2
+            className={fileStateTextColor({
+              uploadState: uploadState,
+              className: "font-semibold",
+            })}
+          >
+            {props.file.name}
+          </h2>
+          <div className="text-muted-foreground">
+            {readableByteSize(props.file.size)}
+          </div>
+        </section>
+        <Button
+          variant="ghost"
+          disabled={uploadState === "success"}
+          size="icon"
+          onClick={() => {
+            props.removeFile(props.file);
+          }}
+        >
+          <Trash />
+        </Button>
+      </CardHeader>
+      <CardContent>
+        <Progress value={progress} />
+      </CardContent>
+      {/* <CardFooter className="animate-pulse">"filestate"</CardFooter> */}
+    </Card>
+  );
+}
+
+const fileStateTextColor = cva("", {
+  variants: {
+    uploadState: {
+      uploading: "text-primary",
+      error: "text-red-500",
+      success: "text-green-500",
+    },
+  },
+});
+
+const fileUploaderCard = cva("transtition-all duration-300", {
+  variants: {
+    uploadState: {
+      uploading: "",
+      error: "bg-red-50",
+      success: "bg-green-50",
+    },
+  },
+});
+type FileUploaderCardProps = VariantProps<typeof fileUploaderCard>;
+
+function readableByteSize(size: number) {
   const units = ["B", "KB", "MB", "GB", "TB"];
   let unitIndex = 0;
   while (size > 1024 && unitIndex < units.length) {

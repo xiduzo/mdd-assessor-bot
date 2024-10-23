@@ -13,33 +13,20 @@ import {
 } from "lucide-react";
 import { RefAttributes, useMemo } from "react";
 
-export function CompetencyDisplay(props: {
-  competency: Competency;
-  className?: string;
-}) {
-  return (
-    <span className={competencyDisplay({ className: props.className })}>
-      {props.competency.replaceAll("-", " ")}
-    </span>
-  );
-}
-
-const competencyDisplay = cva("inline-block first-letter:capitalize");
-
 export function CompetencyIcon(
   props: { competency: Competency } & Omit<LucideProps, "ref"> &
     RefAttributes<SVGSVGElement>,
 ) {
   switch (props.competency) {
-    case "self-directed-learning":
+    case "self-directed learning":
       return <MoveUpRight {...props} />;
-    case "concepting-and-ideation":
+    case "concepting and ideation":
       return <Radar {...props} />;
-    case "reflection-and-awareness":
+    case "reflection and awareness":
       return <Eye {...props} />;
-    case "framing-and-strategising":
+    case "framing and strategising":
       return <Frame {...props} />;
-    case "creating-and-crafting":
+    case "creating and crafting":
       return <FlaskConical {...props} />;
   }
 }
@@ -63,11 +50,11 @@ export function CompetencyIconWithBackground(props: {
 const competencyBackground = cva("", {
   variants: {
     indicator: {
-      "self-directed-learning": "bg-yellow-100",
-      "concepting-and-ideation": "bg-pink-200",
-      "reflection-and-awareness": "bg-violet-200",
-      "framing-and-strategising": "bg-sky-200",
-      "creating-and-crafting": "bg-teal-200",
+      "self-directed learning": "bg-yellow-100",
+      "concepting and ideation": "bg-pink-200",
+      "reflection and awareness": "bg-violet-200",
+      "framing and strategising": "bg-sky-200",
+      "creating and crafting": "bg-teal-200",
     },
   },
 });
@@ -168,11 +155,11 @@ export function CompetencyProgress(
 const competencyProgress = cva("", {
   variants: {
     competency: {
-      "self-directed-learning": "[&>*]:bg-yellow-100",
-      "concepting-and-ideation": "[&>*]:bg-pink-200",
-      "reflection-and-awareness": "[&>*]:bg-violet-200",
-      "framing-and-strategising": "[&>*]:bg-sky-200",
-      "creating-and-crafting": "[&>*]:bg-teal-200",
+      "self-directed learning": "[&>*]:bg-yellow-100",
+      "concepting and ideation": "[&>*]:bg-pink-200",
+      "reflection and awareness": "[&>*]:bg-violet-200",
+      "framing and strategising": "[&>*]:bg-sky-200",
+      "creating and crafting": "[&>*]:bg-teal-200",
     },
   },
 });

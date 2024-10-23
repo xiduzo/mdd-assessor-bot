@@ -44,6 +44,7 @@
   },
   "license": "MIT",
   "dependencies": {
+    "@formkit/auto-animate": "^0.8.2",
     "@hookform/resolvers": "^3.9.0",
     "@langchain/community": "^0.3.7",
     "@langchain/core": "^0.3.13",

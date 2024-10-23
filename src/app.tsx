@@ -1,8 +1,8 @@
 import { Toaster } from "@/components/ui/sonner";
+import { FeedbackProvider } from "@/providers/FeedbackProvider";
+import { LlmProvider } from "@/providers/LlmProvider";
 import { Router } from "@/routes";
 import { createRoot } from "react-dom/client";
-import { FeedbackProvider } from "./providers/FeedbackProvider";
-import { LlmProvider } from "./providers/LlmProvider";
 
 function App() {
   return (

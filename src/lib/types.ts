@@ -9,11 +9,11 @@ export const grades = [
 export type Grade = (typeof grades)[number];
 
 export const competencies = [
-  "self-directed-learning",
-  "concepting-and-ideation",
-  "reflection-and-awareness",
-  "framing-and-strategising",
-  "creating-and-crafting",
+  "self-directed learning",
+  "framing and strategising",
+  "concepting and ideation",
+  "creating and crafting",
+  "reflection and awareness",
 ] as const;
 export type Competency = (typeof competencies)[number];
 
@@ -55,7 +55,7 @@ export type CompetencyWithIndicators = z.infer<typeof competencyWithIndicators>;
 
 export const competenciesWithIncidactors: CompetencyWithIndicators[] = [
   {
-    name: "self-directed-learning",
+    name: "self-directed learning",
     abbreviation: "SDL",
     description:
       "The student displays autonomy in reaching their own design goals and can identify, and act upon, ways to reach their goals in terms of acquiring the right skills and identifying expert communities.",
@@ -199,7 +199,7 @@ export const competenciesWithIncidactors: CompetencyWithIndicators[] = [
     ],
   },
   {
-    name: "framing-and-strategising",
+    name: "framing and strategising",
     abbreviation: "FS",
     description:
       "The student develops a set of skills in framing the design context, identifying and engaging with stakeholders, making evidencebased design decisions, and formulating comprehensive design strategies.",
@@ -301,7 +301,7 @@ export const competenciesWithIncidactors: CompetencyWithIndicators[] = [
     ],
   },
   {
-    name: "concepting-and-ideation",
+    name: "concepting and ideation",
     abbreviation: "CI",
     description:
       "The student masters a set of tools to generate original ideas and designs.",
@@ -432,7 +432,7 @@ export const competenciesWithIncidactors: CompetencyWithIndicators[] = [
     ],
   },
   {
-    name: "creating-and-crafting",
+    name: "creating and crafting",
     abbreviation: "CC",
     description: "The student shows skills to produce their designs.",
     indicators: [
@@ -522,7 +522,7 @@ export const competenciesWithIncidactors: CompetencyWithIndicators[] = [
     ],
   },
   {
-    name: "reflection-and-awareness",
+    name: "reflection and awareness",
     abbreviation: "RA",
     description:
       "The student understands the context of their work. They can take a meta view of the situation their work operates in and understand the implications of their design on people and planet in that context over time.",

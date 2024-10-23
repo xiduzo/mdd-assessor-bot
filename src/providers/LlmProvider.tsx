@@ -20,20 +20,12 @@ import {
   useContext,
   useEffect,
   useRef,
+  useState,
 } from "react";
+import { toast } from "sonner";
 import { useLocalStorage } from "usehooks-ts";
 import { ZodError } from "zod";
 import { useFeedback } from "./FeedbackProvider";
-
-const model = "llama3.1";
-const embeddingsModel = "mxbai-embed-large";
-
-// TODO: allow the user to select model and params
-const llm = new Ollama({
-  model: model,
-  numCtx: 1000,
-  format: "json",
-});
 
 // TODO: allow the user to set the embeddings model params
 const textSplitter = new RecursiveCharacterTextSplitter({
@@ -41,41 +33,43 @@ const textSplitter = new RecursiveCharacterTextSplitter({
   chunkOverlap: 20,
 });
 
-const competencies = competenciesWithIncidactors.map((competency): string => {
-  let text = ``;
-  text += `# Competency: ${competency.name.replaceAll("-", " ")} (${competency.abbreviation})`;
-  text += `\n`;
-  text += competency.description;
-  text += `\n\n`;
-
-  competency.indicators.forEach((indicator) => {
-    text += `## Indicator: ${indicator.name}`;
+const competencies = competenciesWithIncidactors.map(
+  (competency): { name: Competency; text: string } => {
+    let text = ``;
+    text += `# Competency: ${competency.name} (${competency.abbreviation})`;
     text += `\n`;
-    text += indicator.description;
+    text += competency.description;
     text += `\n\n`;
 
-    text += `### Expectations`;
-    text += `\n`;
-    text += indicator.expectations;
-    text += `\n\n`;
-
-    text += `### Grading`;
-    text += `\n\n`;
-
-    indicator.grades.forEach((grade) => {
-      text += `#### Grade: ${grade.grade}`;
+    competency.indicators.forEach((indicator) => {
+      text += `## Indicator: ${indicator.name}`;
       text += `\n`;
+      text += indicator.description;
+      text += `\n\n`;
 
-      grade.expectations.forEach((expectation) => {
-        text += `- ${expectation}`;
+      text += `### Expectations`;
+      text += `\n`;
+      text += indicator.expectations;
+      text += `\n\n`;
+
+      text += `### Grading`;
+      text += `\n\n`;
+
+      indicator.grades.forEach((grade) => {
+        text += `#### Grade: ${grade.grade}`;
+        text += `\n`;
+
+        grade.expectations.forEach((expectation) => {
+          text += `- ${expectation}`;
+          text += `\n`;
+        });
         text += `\n`;
       });
-      text += `\n`;
     });
-  });
 
-  return text;
-});
+    return { name: competency.name, text };
+  },
+);
 
 const systemTemplate = `
   # IDENTITY and PURPOSE
@@ -126,63 +120,108 @@ const systemTemplate = `
   {context}
   `;
 
-type LmmContext = {
-  addStudentDocuments: (
-    input: { fileName: string; data: string }[],
-  ) => Promise<void>;
+export type DocumentMetaData = Pick<File, "name" | "lastModified"> & {
+  type: "student document" | "grading template";
+};
+
+type AddDocumentInput = Omit<DocumentMetaData, "type"> & { text: string };
+
+type LmmContextType = {
+  addStudentDocuments: (input: AddDocumentInput[]) => Promise<void>;
+  removeStudentDocuments: (input: Pick<File, "name">[]) => void;
+  documents: Document<DocumentMetaData>[];
+  model: string;
+  embeddingsModel: string;
+  status: "initializing" | "initialized" | "error" | undefined;
   getGrading: (
     competency: Competency,
     indicator: Pick<Indicator, "name">,
     triesLeft?: number,
-  ) => void;
+  ) => Promise<void>;
 };
-const LlmContext = createContext<LmmContext>({
+
+const LlmContext = createContext<LmmContextType>({
   addStudentDocuments: async () => {
     console.error("addStudentDocument not implemented");
   },
+  removeStudentDocuments: async () => {
+    console.error("removeStudentDocument not implemented");
+  },
+  status: "initializing",
+  documents: [],
+  model: "not-set",
+  embeddingsModel: "not-set",
   getGrading: async () => {
     console.error("getGradingTemplate not implemented");
   },
 });
 
 export function LlmProvider(props: PropsWithChildren) {
-  const [documents, setDocuments] = useLocalStorage<Document[]>(
-    "documents",
-    [],
+  const [documents, setDocuments, clearDocuments] = useLocalStorage<
+    Document<DocumentMetaData>[]
+  >("documents", []);
+  const [model] = useLocalStorage("model", "llama3.2");
+  const [status, setStatus] = useState<LmmContextType["status"]>();
+  const [embeddingsModel] = useLocalStorage(
+    "embeddingsModel",
+    "mxbai-embed-large",
   );
 
-  const { addFeedback } = useFeedback();
+  const { setFeedback } = useFeedback();
+
+  useEffect(() => {
+    const shouldClear = false;
+
+    if (!shouldClear) return;
+    clearDocuments();
+  }, [clearDocuments]);
 
   const runnable = useRef<Runnable | null>(null);
   const vectorStore = useRef<MemoryVectorStore | null>(null);
 
-  const addStudentDocuments = useCallback(
-    async (input: { fileName: string; data: string }[]) => {
-      console.log("Adding student document", input);
-      const texts = input.map(({ data }) => data);
-      const meta = input.map(({ fileName }) => ({
-        fileName,
-        type: "student document",
-      }));
-      const documents = await textSplitter.createDocuments(texts, meta);
-      console.log("Adding documents", documents);
-      await vectorStore.current?.addDocuments(documents);
-      setDocuments((prev) => [...prev, ...documents]);
+  const removeStudentDocuments = useCallback(
+    async (documents: Pick<File, "name">[]) => {
+      const fileNamesToDelete = documents.map(({ name }) => name);
+      // TODO: figure out how to properly remove documents
+      // https://js.langchain.com/docs/integrations/vectorstores/memory/
+      // https://v03.api.js.langchain.com/classes/_langchain_core.stores.InMemoryStore.html#mdelete
+      // seems like https://js.langchain.com/docs/integrations/vectorstores/chroma/#delete-items-from-vector-store
+      if (vectorStore.current) {
+        // This is a hack to remove the vectors from the memory store
+        vectorStore.current.memoryVectors =
+          vectorStore.current.memoryVectors.filter(
+            (vector) => !fileNamesToDelete.includes(vector.metadata.name),
+          );
+      }
+      setDocuments((prev) =>
+        prev.filter(
+          (document) => !fileNamesToDelete.includes(document.metadata.name),
+        ),
+      );
     },
     [],
   );
 
-  const removeStudentDocuments = useCallback(
-    (input: { fileName: string }[]) => {
-      // TODO: figure out how to remove documents
-      // https://js.langchain.com/docs/integrations/vectorstores/memory/
-      // https://v03.api.js.langchain.com/classes/_langchain_core.stores.InMemoryStore.html#mdelete
-      // seems like https://js.langchain.com/docs/integrations/vectorstores/chroma/#delete-items-from-vector-store
-      vectorStore.current?.delete({
-        fileName: input.map(({ fileName }) => fileName),
-      });
+  const addStudentDocuments = useCallback(
+    async (files: AddDocumentInput[]) => {
+      await removeStudentDocuments(files);
+      console.log("files", files);
+      const texts = files.map(({ text }) => text);
+      const meta = files.map(
+        (file): DocumentMetaData => ({
+          name: file.name,
+          lastModified: file.lastModified,
+          type: "student document",
+        }),
+      );
+      const documents = await textSplitter.createDocuments(texts, meta);
+      await vectorStore.current?.addDocuments(documents);
+      setDocuments((prev) => [
+        ...prev,
+        ...(documents as Document<DocumentMetaData>[]),
+      ]);
     },
-    [],
+    [removeStudentDocuments],
   );
 
   const getGrading = useCallback(
@@ -195,66 +234,84 @@ export function LlmProvider(props: PropsWithChildren) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
 
-      const query = `could you please grade and give feedback to the student for ${indicator.name}`;
+      const query = `could you please grade and give feedback to the student for the competency ${competency}, indicator ${indicator.name}`;
 
       console.log("query", query);
 
       try {
+        // TODO: cancel the request if the component is unmounted
         const result = await runnable.current.invoke({ input: query });
         const json = JSON.parse(result.answer);
 
         console.log("result", result);
         const data = feedback.parse(json);
-        addFeedback(competency, indicator.name, data);
+        setFeedback(competency, indicator.name, data);
       } catch (error) {
         if (error instanceof ZodError) {
           console.log("TODO: fix ollama response error", error.errors);
+        } else {
+          console.log("TODO: fix ollama error", error);
         }
-
-        console.log("TODO: fix ollama error", error);
 
         if (!triesLeft) {
           console.error("Failed to get grading for", competency, indicator);
+          toast.error(`${competency} - ${indicator.name}`, {
+            description: "Failed to get feedback",
+          });
+
           return;
         }
 
         console.warn("tries left", triesLeft, indicator.name);
-        getGrading(competency, indicator, triesLeft - 1);
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+        await getGrading(competency, indicator, triesLeft - 1);
       }
     },
-    [runnable.current, addFeedback],
+    [runnable.current, setFeedback],
   );
 
-  useEffect(() => {
-    // TODO: make the user select models
-    ollama.pull({ model: model }).then(console.log).catch(console.error);
-    ollama
-      .pull({ model: embeddingsModel })
-      .then(console.log)
-      .catch(console.error);
-  }, []);
+  const initialize = useCallback(async () => {
+    if (status) {
+      return;
+    }
+    setStatus("initializing");
+
+    const modelPulled = await pullLlmModel(model);
+    const embeddingsModelPulled = await pullLlmModel(embeddingsModel);
+
+    if (!modelPulled || !embeddingsModelPulled) {
+      return;
+    }
+
+    const llm = new Ollama({
+      model: model,
+      numCtx: 1000,
+      format: "json",
+    });
+
+    const store = await createVectorStore(embeddingsModel, documents);
+    vectorStore.current = store;
+    console.log("store", store);
+
+    const runner = await createRunner(llm, store);
+    runnable.current = runner;
+    console.log("runner", runner);
+    setStatus("initialized");
+  }, [model, embeddingsModel, documents, status]);
 
   useEffect(() => {
-    if (vectorStore.current) return;
-
-    createVectorStore(documents)
-      .then((store) => {
-        console.log("Vector store created", store);
-        vectorStore.current = store;
-        createRunner(store)
-          .then((runner) => {
-            console.log("Runner created", runner);
-            runnable.current = runner;
-          })
-          .catch(console.error);
-      })
-      .catch(console.error);
-  }, [documents]);
+    initialize();
+  }, [initialize]);
 
   return (
     <LlmContext.Provider
       value={{
         addStudentDocuments,
+        removeStudentDocuments,
+        documents,
+        model,
+        embeddingsModel,
+        status,
         getGrading,
       }}
     >
@@ -267,10 +324,42 @@ export function useLlm() {
   return useContext(LlmContext);
 }
 
-async function createVectorStore(initialDocuments: Document[] = []) {
+async function pullLlmModel(model: string) {
+  try {
+    const response = await ollama.pull({ model: model });
+
+    console.log("pullLlmModel", response);
+    if (response.status !== "success") {
+      toast.error(`Failed to load model: ${model}`, {
+        description: response.status,
+      });
+    }
+
+    return true;
+  } catch (error) {
+    toast.error(`Failed to load model: ${model}`, {
+      description:
+        "message" in (error as Error)
+          ? (error as Error).message
+          : "Unknown error",
+    });
+    return false;
+  }
+}
+
+async function createVectorStore(
+  embeddingsModel: string,
+  initialDocuments: Document[] = [],
+) {
   const splitDocs = await textSplitter.createDocuments(
-    competencies,
-    competencies.map(() => ({ type: "competency and indicators" })),
+    competencies.map((competency) => competency.text),
+    competencies.map(
+      (competency): DocumentMetaData => ({
+        name: competency.name,
+        lastModified: Date.now(),
+        type: "grading template",
+      }),
+    ),
   );
 
   return MemoryVectorStore.fromDocuments(
@@ -279,7 +368,7 @@ async function createVectorStore(initialDocuments: Document[] = []) {
   );
 }
 
-async function createRunner(vectorStore: MemoryVectorStore) {
+async function createRunner(llm: Ollama, vectorStore: MemoryVectorStore) {
   const retriever = vectorStore.asRetriever();
 
   const prompt = ChatPromptTemplate.fromMessages([
