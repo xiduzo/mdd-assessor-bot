@@ -1,6 +1,6 @@
 import {
   CompetencyIconWithBackground,
-  IndicatorGradeProgress
+  IndicatorGradeProgress,
 } from "@/components/custom/Indicator";
 import { Button } from "@/components/ui/button";
 import {
@@ -8,7 +8,7 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
-  CardTitle
+  CardTitle,
 } from "@/components/ui/card";
 import { Competency, CompetencyWithIndicators, Indicator } from "@/lib/types";
 import { useFeedback } from "@/providers/FeedbackProvider";
@@ -24,10 +24,10 @@ export function ResultRoute() {
   const { competenciesWithIncidactors, clearFeedback } = useFeedback();
 
   useEffect(() => {
-    if(documents.length) return
+    if (documents.length) return;
 
-    navigate("/")
-  }, [documents, navigate])
+    navigate("/", { replace: true });
+  }, [documents, navigate]);
   return (
     <article>
       <Card>

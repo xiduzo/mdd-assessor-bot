@@ -197,7 +197,7 @@ function FeedbackDialog(props: {
               </section>
             )}
             <Button
-              variant="outline"
+              variant="ghost"
               size="icon"
               disabled={!props.indicator.feedback}
               className="absolute right-0 top-0 z-50"

@@ -59,13 +59,14 @@ export function Router() {
 function Layout(props: PropsWithChildren) {
   const navigate = useNavigate();
   const location = useLocation();
+
   return (
     <main className="min-h-lvh flex flex-col">
       <header className="flex justify-between p-4 sticky top-0">
         <Button
           variant="ghost"
           size="icon"
-          disabled={location.key === "default"}
+          disabled={location.pathname === "/"}
           onClick={() => navigate(-1)}
         >
           {location.key !== "default" && <ArrowLeft />}

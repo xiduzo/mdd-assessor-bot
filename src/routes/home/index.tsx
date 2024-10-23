@@ -119,8 +119,8 @@ export function HomeRoute() {
             navigate("/result");
           }}
         >
-          {!documents.length && "Upload documents to start analyzing"}
-          {!!documents.length && "Start analyzing"}
+          {!documents.length && "Upload documents to receive feedback"}
+          {!!documents.length && "I want feedback"}
         </Button>
         <a
           href="https://sanderboer.nl"
@@ -143,15 +143,16 @@ function FileUploader(props: { file: File; removeFile: (file: File) => void }) {
 
   useInterval(
     () => {
+      console.log("interval");
       setProgress((prev) => {
         if (prev >= 100) {
           return 100;
         }
 
-        return Math.max(95, prev + Math.random() * 3);
+        return Math.min(95, prev + Math.random() * 3);
       });
     },
-    uploadState === "uploading" ? 300 : null,
+    uploadState === "uploading" ? 100 : null,
   );
 
   useEffect(() => {
