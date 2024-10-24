@@ -1,8 +1,10 @@
+import AnimatedGridPattern from "@/components/ui/animated-grid-pattern";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import { cn } from "@/lib/utils";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { useLlm } from "@/providers/LlmProvider";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
@@ -31,12 +33,23 @@ export function HomeRoute() {
 
   return (
     <>
-      <article className="text-center flex flex-col space-y-6 h-[85vh]">
-        <header className="flex flex-col items-center mt-0">
-          <div className="w-40 h-40 rounded-full bg-purple-400 animate-pulse mb-4"></div>
+      <article className="text-center flex flex-col space-y-12 h-[85vh]">
+        <header className="flex flex-col items-center mt-0 space-y-6">
+          <div className="w-40 h-40 rounded-full bg-purple-400"></div>
           <h1 className="font-semibold text-4xl">
             Let's review your documents 👀
           </h1>
+          <AnimatedGridPattern
+            maxOpacity={0.05}
+            numSquares={30}
+            y={-14}
+            className={cn(
+              `[mask-image:radial-gradient(600px_circle_at_top,white,transparent,transparent)]`,
+              `lg:[mask-image:radial-gradient(800px_circle_at_top,white,transparent,transparent)]`,
+              `2xl:[mask-image:radial-gradient(1080px_circle_at_top,white,transparent,transparent)]`,
+              "inset-x-0 -inset-y-10 -z-10",
+            )}
+          />
         </header>
         <section className="grow space-y-4" ref={autoAnimateRef}>
           {files.map((file) => (
@@ -47,16 +60,18 @@ export function HomeRoute() {
               <Label
                 htmlFor="file"
                 aria-label={`Upload new files, PDF - max. ${MAX_FILE_SIZE_IN_MB} MB`}
-                className="flex flex-col items-center justify-end space-y-2"
+                className="flex flex-col items-center justify-end space-y-4"
               >
-                <FilePlus className="bg-muted rounded-full w-12 h-12 p-3 text-muted-foreground" />
-                <div>
-                  <span className="font-bold">Click to upload</span> or drag and
-                  drop
-                </div>
-                <div className="text-muted-foreground">
-                  PDF - max. {MAX_FILE_SIZE_IN_MB} MB
-                </div>
+                <FilePlus className="text-muted-foreground" />
+                <section className="space-y-2">
+                  <div>
+                    <span className="font-bold">Click to upload</span> or drag
+                    and drop
+                  </div>
+                  <div className="text-muted-foreground">
+                    PDF - max. {MAX_FILE_SIZE_IN_MB} MB
+                  </div>
+                </section>
               </Label>
               <Input
                 id="file"
@@ -131,7 +146,7 @@ export function HomeRoute() {
 }
 
 const dropArea = cva(
-  "hover:bg-muted hover:border-primary/40 bg-none  transition-all max-h-72 min-h-24 h-[25vh] relative border-2 border-dashed rounded-lg flex items-center justify-center",
+  "hover:bg-muted bg-none transition-all max-h-72 min-h-24 h-[25vh] relative border-2 border-dashed rounded-lg flex items-center justify-center",
   {
     variants: {
       active: {
@@ -211,6 +226,8 @@ function FileUploader(props: { file: File; removeFile: (file: File) => void }) {
           },
         ]);
         props.removeFile(props.file);
+
+        // TODO make a nice animation to "move" into the folder
       },
     );
   }, [props.file, props.removeFile]);

@@ -65,7 +65,7 @@ export function ResultRoute() {
             <em>/ˈfiːd.bæk/</em>
           </CardDescription>
         </CardHeader>
-        <CardContent className="grid lg:grid-cols-2 grid-cols-1 lg:gap-12 gap-8">
+        <CardContent className="grid lg:grid-cols-2 grid-cols-1 lg:gap-10 gap-8">
           {competenciesWithIncidactors.map((competenctWithIndicators) => (
             <CompetencyResult
               key={competenctWithIndicators.name}

@@ -2,7 +2,7 @@ import {
   competenciesWithIncidactors,
   Competency,
   feedback,
-  Indicator
+  Indicator,
 } from "@/lib/types";
 import { Document } from "@langchain/core/documents";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
@@ -21,7 +21,7 @@ import {
   useEffect,
   useMemo,
   useRef,
-  useState
+  useState,
 } from "react";
 import { toast } from "sonner";
 import { useLocalStorage } from "usehooks-ts";
@@ -284,37 +284,43 @@ export function LlmProvider(props: PropsWithChildren) {
     [runnable.current, setFeedback, documents],
   );
 
-  const setModel = useCallback(async (modelName: string) => {
-    if(!models.length) {
-      toast.warning(`Unable to set model ${modelName}`, {
-        description: "Please wait for the models to load",
-      });
-      return
-    }
+  const setModel = useCallback(
+    async (modelName: string) => {
+      if (!models.length) {
+        toast.warning(`Unable to set model ${modelName}`, {
+          description: "Please wait for the models to load",
+        });
+        return;
+      }
 
-    const model = await getModel(modelName, models);
-    if(!model) {
-      return
-    }
+      const model = await getModel(modelName, models);
+      if (!model) {
+        return;
+      }
 
-    setLocalModel(modelName);
-  }, [models])
+      setLocalModel(modelName);
+    },
+    [models],
+  );
 
-  const setEmbeddings = useCallback(async (embeddings: string) => {
-    if(!models.length) {
-      toast.warning(`Unable to set model ${embeddings}`, {
-        description: "Please wait for the models to load",
-      });
-      return
-    }
+  const setEmbeddings = useCallback(
+    async (embeddings: string) => {
+      if (!models.length) {
+        toast.warning(`Unable to set model ${embeddings}`, {
+          description: "Please wait for the models to load",
+        });
+        return;
+      }
 
-    const model = await getModel(embeddings, models);
-    if(!model) {
-      return
-    }
+      const model = await getModel(embeddings, models);
+      if (!model) {
+        return;
+      }
 
-    setLocalEmbedding(embeddings);
-  }, [models])
+      setLocalEmbedding(embeddings);
+    },
+    [models],
+  );
 
   useMemo(async () => {
     if (!models.length) return;
@@ -433,15 +439,18 @@ async function getModel(
 
   if (model) return model;
 
-  const downloadToast = toast.info(`Model ${modelName} not found`, {
+  const downloadToast = toast.info(`${modelName} not found on your machine`, {
     dismissible: false,
-    description: "Trying to fetch it from the internet...",
+    duration: 9999999999,
+    important: true,
+    description: "Downloading model, this might take a while",
   });
 
   const response = await ollama.pull({ model: modelName });
-  toast.dismiss(downloadToast);
 
   if (response.status === "success") {
+    await new Promise((resolve) => setTimeout(resolve, 10000)); // Give some time for the model to be available
+    toast.dismiss(downloadToast);
     return getModel(modelName, availableModels);
   }
 

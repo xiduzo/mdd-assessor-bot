@@ -6,7 +6,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle
+  DialogTitle,
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -18,8 +18,9 @@ import {
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import NumberTicker from "@/components/ui/number-ticker";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLlm } from "@/providers/LlmProvider";
 import { cva } from "class-variance-authority";
@@ -31,7 +32,7 @@ import {
   BotOff,
   FileDigit,
   Folder,
-  FolderOpen
+  FolderOpen,
 } from "lucide-react";
 import { PropsWithChildren, useEffect, useMemo, useState } from "react";
 import {
@@ -40,7 +41,7 @@ import {
   Route,
   Routes,
   useLocation,
-  useNavigate
+  useNavigate,
 } from "react-router-dom";
 import { HomeRoute } from "./home";
 import { ResultRoute } from "./result";
@@ -245,27 +246,27 @@ function MyDocuments() {
             {isOpen ? <FolderOpen /> : <Folder />}
             <Badge
               className={badge({
-                folderOpen: isOpen
+                folderOpen: isOpen,
               })}
               aria-hidden
             >
-              {myDocuments.length}
+              <NumberTicker
+                value={myDocuments.length}
+                className="text-white w-full"
+              />
             </Badge>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           {!myDocuments.length && (
             <DropdownMenuItem disabled>
-              Mucho empty , your uploaded documents will appear here
+              Mucho empty, your uploaded documents will appear here
             </DropdownMenuItem>
           )}
           {myDocuments.map((doc, index) => (
             <DropdownMenuItem
               key={doc.name}
-              onClick={() => {
-                console.log(doc);
-                setOpenDocument(doc);
-              }}
+              onClick={() => setOpenDocument(doc)}
             >
               <div className="flex flex-col">
                 {doc.name}
@@ -289,14 +290,14 @@ function MyDocuments() {
             setOpenDocument(undefined);
           }}
         >
-          <DialogContent>
+          <DialogContent className="max-w-4xl">
             <DialogHeader>
               <DialogTitle>{openDocument.name}</DialogTitle>
               <DialogDescription>
                 {format(openDocument.lastModified, "dd MMM yyyy HH:mm")}
               </DialogDescription>
             </DialogHeader>
-            <ScrollArea className="max-h-[55vh] grow">
+            <ScrollArea className="max-h-[55vh] grow pr-4">
               {openDocument.text}
             </ScrollArea>
             <DialogFooter>
@@ -317,18 +318,11 @@ function MyDocuments() {
   );
 }
 
-const badge = cva(
-  "absolute transition-all p-0 w-4 h-4 text-xs flex items-center justify-center pointer-events-none",
-  {
-    variants: {
-      folderOpen: {
-        true: "scale-0 top-2 right-3",
-        false: "top-0 right-0",
-      },
-      hasNewDocument: {
-        true: 'animate-bounce',
-        false: ''
-      }
+const badge = cva("absolute transition-all p-0 w-4 h-4 pointer-events-none", {
+  variants: {
+    folderOpen: {
+      true: "scale-0 top-2 right-3",
+      false: "top-0 right-0",
     },
   },
-);
+});
