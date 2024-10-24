@@ -6,7 +6,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
+  DialogTitle
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
@@ -18,7 +18,7 @@ import {
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLlm } from "@/providers/LlmProvider";
@@ -31,7 +31,7 @@ import {
   BotOff,
   FileDigit,
   Folder,
-  FolderOpen,
+  FolderOpen
 } from "lucide-react";
 import { PropsWithChildren, useEffect, useMemo, useState } from "react";
 import {
@@ -40,7 +40,7 @@ import {
   Route,
   Routes,
   useLocation,
-  useNavigate,
+  useNavigate
 } from "react-router-dom";
 import { HomeRoute } from "./home";
 import { ResultRoute } from "./result";
@@ -112,7 +112,7 @@ function LlmAgent() {
           {model}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-52">
+      <DropdownMenuContent className="w-52" align="end">
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
             <BotMessageSquare size={16} className="mr-2" />
@@ -243,7 +243,12 @@ function MyDocuments() {
             aria-label={`View my uploaded documents (${myDocuments.length} documents)`}
           >
             {isOpen ? <FolderOpen /> : <Folder />}
-            <Badge className={badge({ folderOpen: isOpen })} aria-hidden>
+            <Badge
+              className={badge({
+                folderOpen: isOpen
+              })}
+              aria-hidden
+            >
               {myDocuments.length}
             </Badge>
           </Button>
@@ -264,12 +269,14 @@ function MyDocuments() {
             >
               <div className="flex flex-col">
                 {doc.name}
-                <span className="text-muted-foreground">
+                <span className="text-muted-foreground text-xs">
                   File modified at{" "}
                   {format(doc.lastModified, "dd MMM yyyy HH:mm")}
                 </span>
               </div>
-              <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
+              {index < 10 && (
+                <DropdownMenuShortcut>⌘{index + 1}</DropdownMenuShortcut>
+              )}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
@@ -318,6 +325,10 @@ const badge = cva(
         true: "scale-0 top-2 right-3",
         false: "top-0 right-0",
       },
+      hasNewDocument: {
+        true: 'animate-bounce',
+        false: ''
+      }
     },
   },
 );

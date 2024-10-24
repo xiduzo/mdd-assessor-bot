@@ -7,13 +7,7 @@ import { useFeedback } from "@/providers/FeedbackProvider";
 import { useLlm } from "@/providers/LlmProvider";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { cva, VariantProps } from "class-variance-authority";
-import {
-  File,
-  FileCheck,
-  FileQuestion,
-  Trash,
-  UploadCloud,
-} from "lucide-react";
+import { File, FileCheck, FilePlus, FileQuestion, Trash } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -55,7 +49,7 @@ export function HomeRoute() {
                 aria-label={`Upload new files, PDF - max. ${MAX_FILE_SIZE_IN_MB} MB`}
                 className="flex flex-col items-center justify-end space-y-2"
               >
-                <UploadCloud className="bg-muted rounded-full w-12 h-12 p-3" />
+                <FilePlus className="bg-muted rounded-full w-12 h-12 p-3 text-muted-foreground" />
                 <div>
                   <span className="font-bold">Click to upload</span> or drag and
                   drop
@@ -137,11 +131,11 @@ export function HomeRoute() {
 }
 
 const dropArea = cva(
-  "hover:bg-primary/5 hover:border-primary/40 transition-all max-h-72 min-h-24 h-[25vh] relative border-2 border-dashed rounded-lg flex items-center justify-center",
+  "hover:bg-muted hover:border-primary/40 bg-none  transition-all max-h-72 min-h-24 h-[25vh] relative border-2 border-dashed rounded-lg flex items-center justify-center",
   {
     variants: {
       active: {
-        true: "bg-primary/5 border-primary/40",
+        true: "bg-muted border-primary/40",
       },
     },
   },

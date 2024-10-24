@@ -34,13 +34,48 @@ export function FeedbackDialog(props: {
   competency: Competency;
   indicator: Indicator;
 }) {
-  const { showFeedback, setFeedback } = useFeedback();
+  const { showFeedback, setFeedback, competenciesWithIncidactors } =
+    useFeedback();
   const { getGrading } = useLlm();
   const [, copy] = useCopyToClipboard();
 
   const mardownFeedback = useMemo(() => {
     return jsonToMarkdown(props.indicator.feedback);
   }, [props.indicator.feedback]);
+
+  const [previousIndicator, nextIndicator] = useMemo(() => {
+    const currentCompetencyIndex = competenciesWithIncidactors.findIndex(
+      ({ name }) => name === props.competency,
+    );
+
+    if (currentCompetencyIndex < 0) {
+      return [undefined, undefined];
+    }
+
+    const currentIndicatorIndex = competenciesWithIncidactors[
+      currentCompetencyIndex
+    ].indicators.findIndex(({ name }) => name === props.indicator.name);
+
+    if (currentIndicatorIndex < 0) {
+      return [undefined, undefined];
+    }
+
+    const previousIndicator =
+      competenciesWithIncidactors[currentCompetencyIndex].indicators[
+        currentIndicatorIndex - 1
+      ] ??
+      competenciesWithIncidactors[currentCompetencyIndex - 1]?.indicators[0] ??
+      competenciesWithIncidactors[competenciesWithIncidactors.length - 1]
+        ?.indicators[0];
+    const nextIndicator =
+      competenciesWithIncidactors[currentCompetencyIndex].indicators[
+        currentIndicatorIndex + 1
+      ] ??
+      competenciesWithIncidactors[currentCompetencyIndex + 1]?.indicators[0] ??
+      competenciesWithIncidactors[0]?.indicators[0];
+
+    return [previousIndicator, nextIndicator];
+  }, [competenciesWithIncidactors, props.competency, props.indicator]);
 
   return (
     <Dialog
@@ -54,7 +89,7 @@ export function FeedbackDialog(props: {
           <DialogTitle className="flex space-x-4">
             <CompetencyIconWithBackground competency={props.competency} />
             <div className="flex flex-col justify-between">
-              <div className="text-xl first-letter:capitalize">
+              <div className="text-2xl first-letter:capitalize">
                 {props.competency}
               </div>
               <span className="text-sm font-light text-muted-foreground">
@@ -153,12 +188,23 @@ ${mardownFeedback}`);
           Feedback generated using ollama3 at 31/03/1994 23:04
         </div>
         <DialogFooter className="grid grid-cols-2">
-          <Button variant="outline" disabled>
+          <Button
+            variant="outline"
+            disabled={!previousIndicator?.feedback}
+            onClick={() => {
+              showFeedback(previousIndicator);
+            }}
+          >
             <ArrowLeft />
-            Previous disciplinary
+            {previousIndicator?.name ?? "Previous disciplinary"}
           </Button>
-          <Button disabled>
-            Next disciplinary
+          <Button
+            disabled={!nextIndicator?.feedback}
+            onClick={() => {
+              showFeedback(nextIndicator);
+            }}
+          >
+            {nextIndicator?.name ?? "Next disciplinary"}
             <ArrowRight />
           </Button>
         </DialogFooter>

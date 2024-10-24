@@ -40,7 +40,7 @@ export function CompetencyIconWithBackground(props: {
       className={competencyBackground({
         indicator: props.competency,
         className:
-          "w-12 min-w-12 h-12 min-h-12 rounded-lg flex items-center justify-center",
+          "w-14 min-w-14 h-14 min-h-14 rounded-lg flex items-center justify-center",
       })}
     >
       <CompetencyIcon competency={props.competency} size={20} />
