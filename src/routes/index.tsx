@@ -84,7 +84,7 @@ function Layout(props: PropsWithChildren) {
           disabled={location.pathname === "/"}
           onClick={() => navigate(-1)}
         >
-          {location.key !== "default" && <ArrowLeft />}
+          {location.pathname !== "/" && <ArrowLeft />}
         </Button>
         <section className="space-x-2">
           <LlmAgent />

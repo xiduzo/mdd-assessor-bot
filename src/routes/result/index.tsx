@@ -90,11 +90,11 @@ function CompetencyResult(props: {
         competency={props.competencyWithIndicators.name}
       />
       <div className="grow">
-        <h2 className="font-bold first-letter:capitalize">
+        <h2 className="font-bold text-lg first-letter:capitalize">
           {props.competencyWithIndicators.name}
         </h2>
         <ol
-          className="space-y-2 mt-1"
+          className="space-y-2 mt-0.5"
           aria-label={`Feedback for ${props.competencyWithIndicators.name} indicators`}
         >
           {props.competencyWithIndicators.indicators.map((indicator) => (
