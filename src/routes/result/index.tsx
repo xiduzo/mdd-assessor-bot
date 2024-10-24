@@ -14,20 +14,37 @@ import { Competency, CompetencyWithIndicators, Indicator } from "@/lib/types";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { useLlm } from "@/providers/LlmProvider";
 import { RotateCcw } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 export function ResultRoute() {
   const { documents } = useLlm();
   const navigate = useNavigate();
+  const previousDocumentsLength = useRef(documents.length);
 
   const { competenciesWithIncidactors, clearFeedback } = useFeedback();
 
   useEffect(() => {
-    if (documents.length) return;
+    if (!documents.length) {
+      toast.warning("No documents found to provide feedback on.");
+      navigate("/", { replace: true });
+      return;
+    }
 
-    navigate("/", { replace: true });
-  }, [documents, navigate]);
+    if (previousDocumentsLength.current !== documents.length) {
+      toast.info("Your documents have been changed", {
+        duration: 10_000,
+        action: {
+          label: "Clear all feedback",
+          onClick: () => clearFeedback(),
+        },
+      });
+      previousDocumentsLength.current = documents.length;
+    }
+
+    previousDocumentsLength.current = documents.length;
+  }, [documents, navigate, clearFeedback]);
   return (
     <article>
       <Card>
@@ -35,6 +52,7 @@ export function ResultRoute() {
           <CardTitle className="flex items-center justify-between">
             Feedback
             <Button
+              aria-label="Clear all feedback"
               disabled={!documents.length}
               variant="ghost"
               size="icon"
@@ -75,7 +93,10 @@ function CompetencyResult(props: {
         <h2 className="font-bold first-letter:capitalize">
           {props.competencyWithIndicators.name}
         </h2>
-        <ol className="space-y-2">
+        <ol
+          className="space-y-2"
+          aria-label={`Feedback for ${props.competencyWithIndicators.name} indicators`}
+        >
           {props.competencyWithIndicators.indicators.map((indicator) => (
             <CompetencyIndicator
               key={indicator.name}
@@ -105,8 +126,14 @@ function CompetencyIndicator(props: {
   }, [props.indicator.feedback, props.competency, status, getGrading]);
 
   return (
-    <li key={props.indicator.name} className="flex space-x-4 items-center">
-      <div className="flex-grow">{props.indicator.name}</div>
+    <li
+      key={props.indicator.name}
+      className="flex space-x-4 items-center"
+      aria-label={`Feedback for ${props.indicator.name}`}
+    >
+      <h3 className="flex-grow" aria-hidden>
+        {props.indicator.name}
+      </h3>
       <IndicatorGradeProgress grade={props.indicator.feedback?.grade} />
       <Button
         variant="link"

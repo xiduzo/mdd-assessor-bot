@@ -2,7 +2,7 @@ import {
   competenciesWithIncidactors,
   Competency,
   feedback,
-  Indicator,
+  Indicator
 } from "@/lib/types";
 import { Document } from "@langchain/core/documents";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
@@ -12,15 +12,16 @@ import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
 import { createRetrievalChain } from "langchain/chains/retrieval";
 import { MemoryVectorStore } from "langchain/vectorstores/memory";
-import ollama from "ollama";
+import ollama, { ModelResponse } from "ollama";
 import {
   createContext,
   PropsWithChildren,
   useCallback,
   useContext,
   useEffect,
+  useMemo,
   useRef,
-  useState,
+  useState
 } from "react";
 import { toast } from "sonner";
 import { useLocalStorage } from "usehooks-ts";
@@ -85,6 +86,7 @@ const systemTemplate = `
 
   # OUTPUT INSTRUCTIONS
   - It is REQUIRED to give a grade. This grade can be either: novice, competent, proficient or visionary.
+  - When no evidence has been provided for an indicator, the grade should be novice and your feedback should indicate the lack of evidence.
   - The feedback given should only reflect the texts given from the students' document, do not make assumptions or give feedback on things not mentioned in the text.
   - Whenever the grade is novice or competent, you should try to give a more in dept-feedback to allow the student to towards a higher grade.
 
@@ -130,8 +132,11 @@ type LmmContextType = {
   addStudentDocuments: (input: AddDocumentInput[]) => Promise<void>;
   removeStudentDocuments: (input: Pick<File, "name">[]) => void;
   documents: Document<DocumentMetaData>[];
+  models: ModelResponse[];
   model: string;
-  embeddingsModel: string;
+  setModel: (model: string) => void;
+  embeddings: string;
+  setEmbeddings: (embeddings: string) => void;
   status: "initializing" | "initialized" | "error" | undefined;
   getGrading: (
     competency: Competency,
@@ -142,17 +147,24 @@ type LmmContextType = {
 
 const LlmContext = createContext<LmmContextType>({
   addStudentDocuments: async () => {
-    console.error("addStudentDocument not implemented");
+    throw new Error("addStudentDocument not implemented");
   },
   removeStudentDocuments: async () => {
-    console.error("removeStudentDocument not implemented");
+    throw new Error("removeStudentDocument not implemented");
   },
   status: "initializing",
   documents: [],
+  models: [],
   model: "not-set",
-  embeddingsModel: "not-set",
+  setModel: () => {
+    throw new Error("setModel not implemented");
+  },
+  embeddings: "not-set",
+  setEmbeddings: () => {
+    throw new Error("setEmbeddings not implemented");
+  },
   getGrading: async () => {
-    console.error("getGradingTemplate not implemented");
+    throw new Error("getGradingTemplate not implemented");
   },
 });
 
@@ -160,11 +172,12 @@ export function LlmProvider(props: PropsWithChildren) {
   const [documents, setDocuments, clearDocuments] = useLocalStorage<
     Document<DocumentMetaData>[]
   >("documents", []);
-  const [model] = useLocalStorage("model", "llama3.2");
+  const [models, setModels] = useState<ModelResponse[]>([]);
   const [status, setStatus] = useState<LmmContextType["status"]>();
-  const [embeddingsModel] = useLocalStorage(
-    "embeddingsModel",
-    "mxbai-embed-large",
+  const [model, setLocalModel] = useLocalStorage("model", "llama3.1:latest");
+  const [embeddings, setLocalEmbedding] = useLocalStorage(
+    "embeddings",
+    "mxbai-embed-large:latest",
   );
 
   const { setFeedback } = useFeedback();
@@ -271,18 +284,47 @@ export function LlmProvider(props: PropsWithChildren) {
     [runnable.current, setFeedback, documents],
   );
 
-  const initialize = useCallback(async () => {
-    if (status) {
-      return;
+  const setModel = useCallback(async (modelName: string) => {
+    if(!models.length) {
+      toast.warning(`Unable to set model ${modelName}`, {
+        description: "Please wait for the models to load",
+      });
+      return
     }
+
+    const model = await getModel(modelName, models);
+    if(!model) {
+      return
+    }
+
+    setLocalModel(modelName);
+  }, [models])
+
+  const setEmbeddings = useCallback(async (embeddings: string) => {
+    if(!models.length) {
+      toast.warning(`Unable to set model ${embeddings}`, {
+        description: "Please wait for the models to load",
+      });
+      return
+    }
+
+    const model = await getModel(embeddings, models);
+    if(!model) {
+      return
+    }
+
+    setLocalEmbedding(embeddings);
+  }, [models])
+
+  useMemo(async () => {
+    if (!models.length) return;
     setStatus("initializing");
 
-    const modelPulled = await pullLlmModel(model);
-    const embeddingsModelPulled = await pullLlmModel(embeddingsModel);
+    const chatModel = await getModel(model, models);
+    if (!chatModel) return;
 
-    if (!modelPulled || !embeddingsModelPulled) {
-      return;
-    }
+    const embeddingsModel = await getModel(embeddings, models);
+    if (!embeddingsModel) return;
 
     const llm = new Ollama({
       model: model,
@@ -295,14 +337,29 @@ export function LlmProvider(props: PropsWithChildren) {
     console.log("store", store);
 
     const runner = await createRunner(llm, store);
-    runnable.current = runner;
     console.log("runner", runner);
+    runnable.current = runner;
     setStatus("initialized");
-  }, [model, embeddingsModel, documents, status]);
+  }, [models, model, embeddings, documents]);
 
   useEffect(() => {
-    initialize();
-  }, [initialize]);
+    ollama
+      .list()
+      .then((response) => {
+        setModels(response.models);
+      })
+      .catch((error) => {
+        toast.error("Unable to connect to ollama", {
+          description: error.message,
+          action: {
+            label: "Get ollama",
+            onClick: () => window.open("https://ollama.com/"),
+          },
+        });
+
+        setStatus("error");
+      });
+  }, []);
 
   return (
     <LlmContext.Provider
@@ -310,8 +367,11 @@ export function LlmProvider(props: PropsWithChildren) {
         addStudentDocuments,
         removeStudentDocuments,
         documents,
+        models,
         model,
-        embeddingsModel,
+        setModel,
+        embeddings,
+        setEmbeddings,
         status,
         getGrading,
       }}
@@ -325,31 +385,8 @@ export function useLlm() {
   return useContext(LlmContext);
 }
 
-async function pullLlmModel(model: string) {
-  try {
-    const response = await ollama.pull({ model: model });
-
-    console.log("pullLlmModel", response);
-    if (response.status !== "success") {
-      toast.error(`Failed to load model: ${model}`, {
-        description: response.status,
-      });
-    }
-
-    return true;
-  } catch (error) {
-    toast.error(`Failed to load model: ${model}`, {
-      description:
-        "message" in (error as Error)
-          ? (error as Error).message
-          : "Unknown error",
-    });
-    return false;
-  }
-}
-
 async function createVectorStore(
-  embeddingsModel: string,
+  model: ModelResponse,
   initialDocuments: Document[] = [],
 ) {
   const splitDocs = await textSplitter.createDocuments(
@@ -365,7 +402,7 @@ async function createVectorStore(
 
   return MemoryVectorStore.fromDocuments(
     [...splitDocs, ...initialDocuments],
-    new OllamaEmbeddings({ model: embeddingsModel }),
+    new OllamaEmbeddings({ model: model.name }),
   );
 }
 
@@ -386,4 +423,31 @@ async function createRunner(llm: Ollama, vectorStore: MemoryVectorStore) {
     retriever,
     combineDocsChain: questionAnswerChain,
   });
+}
+
+async function getModel(
+  modelName: string,
+  availableModels: ModelResponse[],
+): Promise<ModelResponse | null> {
+  const model = availableModels.find(({ name }) => name === modelName);
+
+  if (model) return model;
+
+  const downloadToast = toast.info(`Model ${modelName} not found`, {
+    dismissible: false,
+    description: "Trying to fetch it from the internet...",
+  });
+
+  const response = await ollama.pull({ model: modelName });
+  toast.dismiss(downloadToast);
+
+  if (response.status === "success") {
+    return getModel(modelName, availableModels);
+  }
+
+  toast.warning(`Model ${modelName} is not available`, {
+    description: "Please select another model",
+  });
+
+  return null;
 }

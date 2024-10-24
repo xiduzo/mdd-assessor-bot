@@ -36,6 +36,7 @@ export function CompetencyIconWithBackground(props: {
 }) {
   return (
     <div
+      aria-hidden
       className={competencyBackground({
         indicator: props.competency,
         className:
@@ -61,7 +62,10 @@ const competencyBackground = cva("", {
 
 export function IndicatorGradeProgress(props: { grade?: Grade }) {
   return (
-    <section className="flex flex-col items-end space-y-1">
+    <section
+      className="flex flex-col items-end space-y-1"
+      aria-label={`Grade: ${props.grade}`}
+    >
       <span className="text-neutral-400 text-xs first-letter:uppercase">
         {props.grade ?? <Skeleton className="w-16 h-4" />}
       </span>

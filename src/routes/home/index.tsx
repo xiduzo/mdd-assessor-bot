@@ -36,84 +36,86 @@ export function HomeRoute() {
   }, []);
 
   return (
-    <article className="text-center flex flex-col space-y-6 h-[85vh]">
-      <header className="flex flex-col items-center mt-0">
-        <div className="w-40 h-40 rounded-full bg-purple-400 animate-pulse mb-4"></div>
-        <h1 className="font-semibold text-4xl">
-          Let's review your documents 👀
-        </h1>
-      </header>
-      <section className="grow space-y-4">
-        {!files.length && (
-          <section
-            className={`hover:bg-primary/5 transition-all max-h-72 min-h-24 h-[25vh] relative border-2 max-w-6xl mx-auto border-dashed border-primary rounded-lg flex items-center justify-center ${active ? "bg-primary/5" : ""}`}
-          >
-            <Label
-              htmlFor="file"
-              className="flex flex-col items-center justify-end space-y-2"
-            >
-              <UploadCloud className="bg-muted rounded-full w-12 h-12 p-3" />
-              <div>
-                <span className="font-bold">Click to upload</span> or drag and
-                drop
-              </div>
-              <div className="text-muted-foreground">
-                PDF (max. {MAX_FILE_SIZE_IN_MB} MB)
-              </div>
-            </Label>
-            <Input
-              id="file"
-              type="file"
-              accept="application/pdf"
-              multiple
-              className="absolute inset-0 h-full cursor-pointer opacity-0"
-              onChange={(event) => {
-                setActive(false);
-                if (!event.target.files?.length) return;
-
-                const newFiles = Array.from(event.target.files).filter(
-                  (file) => {
-                    if (file.type !== "application/pdf") {
-                      toast.warning(file.name, {
-                        description: "Only PDF files are allowed",
-                      });
-                      return;
-                    }
-
-                    if (file.size > MAX_FILE_SIZE) {
-                      toast.warning(file.name, {
-                        description: `Your file is too large (${readableByteSize(file.size)}), max ${MAX_FILE_SIZE_IN_MB} MB`,
-                      });
-                      return;
-                    }
-
-                    return file;
-                  },
-                );
-
-                setFiles(newFiles);
-              }}
-              onDragEnter={() => {
-                setActive(true);
-              }}
-              onDragLeave={() => {
-                setActive(false);
-              }}
-            />
-          </section>
-        )}
-        <section className="space-y-2" ref={autoAnimateRef}>
+    <>
+      <article className="text-center flex flex-col space-y-6 h-[85vh]">
+        <header className="flex flex-col items-center mt-0">
+          <div className="w-40 h-40 rounded-full bg-purple-400 animate-pulse mb-4"></div>
+          <h1 className="font-semibold text-4xl">
+            Let's review your documents 👀
+          </h1>
+        </header>
+        <section className="grow space-y-4" ref={autoAnimateRef}>
           {files.map((file) => (
             <FileUploader key={file.name} file={file} removeFile={removeFile} />
           ))}
+          {!files.length && (
+            <section className={dropArea({ active: active })}>
+              <Label
+                htmlFor="file"
+                aria-label={`Upload new files, PDF - max. ${MAX_FILE_SIZE_IN_MB} MB`}
+                className="flex flex-col items-center justify-end space-y-2"
+              >
+                <UploadCloud className="bg-muted rounded-full w-12 h-12 p-3" />
+                <div>
+                  <span className="font-bold">Click to upload</span> or drag and
+                  drop
+                </div>
+                <div className="text-muted-foreground">
+                  PDF - max. {MAX_FILE_SIZE_IN_MB} MB
+                </div>
+              </Label>
+              <Input
+                id="file"
+                type="file"
+                accept="application/pdf"
+                multiple
+                disabled={files.length > 0}
+                className="absolute inset-0 h-full cursor-pointer opacity-0"
+                onChange={(event) => {
+                  setActive(false);
+                  if (!event.target.files?.length) return;
+
+                  const newFiles = Array.from(event.target.files).filter(
+                    (file) => {
+                      if (file.type !== "application/pdf") {
+                        toast.warning(file.name, {
+                          description: "Only PDF files are allowed",
+                        });
+                        return;
+                      }
+
+                      if (file.size > MAX_FILE_SIZE) {
+                        toast.warning(file.name, {
+                          description: `Your file is too large (${readableByteSize(file.size)}), max ${MAX_FILE_SIZE_IN_MB} MB`,
+                        });
+                        return;
+                      }
+
+                      return file;
+                    },
+                  );
+
+                  setFiles(newFiles);
+                }}
+                onDragEnter={() => {
+                  setActive(true);
+                }}
+                onDragLeave={() => {
+                  setActive(false);
+                }}
+              />
+            </section>
+          )}
+          {active && (
+            <div className="text-muted-foreground">Drop it like its 🔥</div>
+          )}
         </section>
-        {active && (
-          <div className="text-muted-foreground">Drop it like its hot</div>
-        )}
-      </section>
-      <section className="flex flex-col items-center space-y-12">
+      </article>
+      <aside className="flex flex-col items-center space-y-10 left-0 absolute w-full bottom-4">
         <Button
-          disabled={!documents.length || status !== "initialized"}
+          disabled={
+            !documents.length || status !== "initialized" || !!files.length
+          }
           onClick={() => {
             clearFeedback();
             navigate("/result");
@@ -125,14 +127,25 @@ export function HomeRoute() {
         <a
           href="https://sanderboer.nl"
           target="_blank"
-          className="text-muted-foreground"
+          className="text-muted-foreground text-xs hover:underline"
         >
           Made with ♥️ by xiduzo
         </a>
-      </section>
-    </article>
+      </aside>
+    </>
   );
 }
+
+const dropArea = cva(
+  "hover:bg-primary/5 hover:border-primary/40 transition-all max-h-72 min-h-24 h-[25vh] relative border-2 border-dashed rounded-lg flex items-center justify-center",
+  {
+    variants: {
+      active: {
+        true: "bg-primary/5 border-primary/40",
+      },
+    },
+  },
+);
 
 function FileUploader(props: { file: File; removeFile: (file: File) => void }) {
   const { addStudentDocuments } = useLlm();
@@ -149,10 +162,10 @@ function FileUploader(props: { file: File; removeFile: (file: File) => void }) {
           return 100;
         }
 
-        return Math.min(95, prev + Math.random() * 3);
+        return Math.min(95, prev + Math.random() * 2);
       });
     },
-    uploadState === "uploading" ? 100 : null,
+    uploadState === "uploading" ? 200 : null,
   );
 
   useEffect(() => {
@@ -253,7 +266,6 @@ function FileUploader(props: { file: File; removeFile: (file: File) => void }) {
       <CardContent>
         <Progress value={progress} />
       </CardContent>
-      {/* <CardFooter className="animate-pulse">"filestate"</CardFooter> */}
     </Card>
   );
 }

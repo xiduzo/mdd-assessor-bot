@@ -10,16 +10,29 @@ import {
 } from "@/components/ui/dialog";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuPortal,
   DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useLlm } from "@/providers/LlmProvider";
 import { cva } from "class-variance-authority";
 import { format } from "date-fns";
-import { ArrowLeft, Bot, BotOff, Folder, FolderOpen } from "lucide-react";
+import {
+  ArrowLeft,
+  Bot,
+  BotMessageSquare,
+  BotOff,
+  FileDigit,
+  Folder,
+  FolderOpen,
+} from "lucide-react";
 import { PropsWithChildren, useEffect, useMemo, useState } from "react";
 import {
   BrowserRouter,
@@ -64,6 +77,7 @@ function Layout(props: PropsWithChildren) {
     <main className="min-h-lvh flex flex-col">
       <header className="flex justify-between p-4 sticky top-0">
         <Button
+          aria-label="Go back"
           variant="ghost"
           size="icon"
           disabled={location.pathname === "/"}
@@ -71,7 +85,7 @@ function Layout(props: PropsWithChildren) {
         >
           {location.key !== "default" && <ArrowLeft />}
         </Button>
-        <section>
+        <section className="space-x-2">
           <LlmAgent />
           <MyDocuments />
         </section>
@@ -82,14 +96,69 @@ function Layout(props: PropsWithChildren) {
 }
 
 function LlmAgent() {
-  const { model, status } = useLlm();
+  const { models, model, setModel, embeddings, setEmbeddings, status } =
+    useLlm();
 
   return (
-    <Button variant="ghost" disabled className={llmAgent({ status: status })}>
-      {status === "initializing" && <BotOff />}
-      {status === "initialized" && <Bot />}
-      {model}
-    </Button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          className={llmAgent({ status: status })}
+          aria-label="Select your LLM assessor"
+        >
+          {status === "initializing" && <BotOff />}
+          {status === "initialized" && <Bot />}
+          {model}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="w-52">
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <BotMessageSquare size={16} className="mr-2" />
+            <span>Feedback model</span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuSubContent>
+              {models.map((m) => {
+                return (
+                  <DropdownMenuCheckboxItem
+                    key={m.name}
+                    checked={m.name === model}
+                    disabled={m.name === model}
+                    onClick={() => setModel(m.name)}
+                  >
+                    <span>{m.name}</span>
+                  </DropdownMenuCheckboxItem>
+                );
+              })}
+            </DropdownMenuSubContent>
+          </DropdownMenuPortal>
+        </DropdownMenuSub>
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <FileDigit size={16} className="mr-2" />
+            <span>Embeddings model</span>
+          </DropdownMenuSubTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuSubContent>
+              {models.map((m) => {
+                return (
+                  <DropdownMenuCheckboxItem
+                    key={m.name}
+                    checked={m.name === embeddings}
+                    disabled={m.name === embeddings}
+                    onClick={() => setEmbeddings(m.name)}
+                  >
+                    <span>{m.name}</span>
+                  </DropdownMenuCheckboxItem>
+                );
+              })}
+            </DropdownMenuSubContent>
+          </DropdownMenuPortal>
+        </DropdownMenuSub>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -167,16 +236,23 @@ function MyDocuments() {
     <>
       <DropdownMenu onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="relative">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="relative"
+            aria-label={`View my uploaded documents (${myDocuments.length} documents)`}
+          >
             {isOpen ? <FolderOpen /> : <Folder />}
-            <Badge className="absolute -top-0 -right-0 p-0 w-4 h-4 text-xs flex items-center justify-center pointer-events-none">
+            <Badge className={badge({ folderOpen: isOpen })} aria-hidden>
               {myDocuments.length}
             </Badge>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           {!myDocuments.length && (
-            <DropdownMenuItem disabled>Mucho empty...</DropdownMenuItem>
+            <DropdownMenuItem disabled>
+              Mucho empty , your uploaded documents will appear here
+            </DropdownMenuItem>
           )}
           {myDocuments.map((doc, index) => (
             <DropdownMenuItem
@@ -233,3 +309,15 @@ function MyDocuments() {
     </>
   );
 }
+
+const badge = cva(
+  "absolute transition-all p-0 w-4 h-4 text-xs flex items-center justify-center pointer-events-none",
+  {
+    variants: {
+      folderOpen: {
+        true: "scale-0 top-2 right-3",
+        false: "top-0 right-0",
+      },
+    },
+  },
+);
