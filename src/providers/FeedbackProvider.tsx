@@ -1,18 +1,16 @@
-import { FeedbackDialog } from "@/components/custom/FeedbackDialog";
 import {
   competenciesWithIncidactors,
   Competency,
   CompetencyWithIndicators,
   Feedback,
-  Indicator
+  Indicator,
 } from "@/lib/types";
 import {
   createContext,
   PropsWithChildren,
   useCallback,
   useContext,
-  useMemo,
-  useState
+  useState,
 } from "react";
 
 type FeedbackContextType = {
@@ -22,12 +20,14 @@ type FeedbackContextType = {
     indicator: string,
     feedback?: Feedback,
   ) => void;
+  selectedFeedback?: Indicator;
   showFeedback: (indicator?: Indicator) => void;
   clearFeedback: () => void;
 };
 
 const FeedbackContext = createContext<FeedbackContextType>({
   competenciesWithIncidactors: competenciesWithIncidactors,
+  selectedFeedback: undefined,
   setFeedback: () => undefined,
   showFeedback: () => undefined,
   clearFeedback: () => undefined,
@@ -36,14 +36,6 @@ const FeedbackContext = createContext<FeedbackContextType>({
 export function FeedbackProvider(props: PropsWithChildren) {
   const [state, setState] = useState(competenciesWithIncidactors);
   const [selectedFeedback, setSelectedFeedback] = useState<Indicator>();
-
-  const selectedCompetency = useMemo(() => {
-    if (!selectedFeedback) return;
-
-    return competenciesWithIncidactors.find(({ indicators }) =>
-      indicators.map(({ name }) => name).includes(selectedFeedback.name),
-    )?.name;
-  }, [selectedFeedback, state]);
 
   const setFeedback = useCallback(
     (competency: Competency, indicator: string, feedback?: Feedback) => {
@@ -85,17 +77,12 @@ export function FeedbackProvider(props: PropsWithChildren) {
       value={{
         competenciesWithIncidactors: state,
         setFeedback,
+        selectedFeedback,
         showFeedback,
         clearFeedback,
       }}
     >
       {props.children}
-      {selectedFeedback && selectedCompetency && (
-        <FeedbackDialog
-          competency={selectedCompetency}
-          indicator={selectedFeedback}
-        />
-      )}
     </FeedbackContext.Provider>
   );
 }

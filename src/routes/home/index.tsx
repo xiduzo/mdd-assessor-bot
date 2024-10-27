@@ -68,9 +68,9 @@ export function HomeRoute() {
                     <span className="font-bold">Click to upload</span> or drag
                     and drop
                   </div>
-                  <div className="text-muted-foreground">
-                    PDF - max. {MAX_FILE_SIZE_IN_MB} MB
-                  </div>
+                  <em className="inline-block text-muted-foreground">
+                    <code>.pdf</code> files, max. {MAX_FILE_SIZE_IN_MB} MB
+                  </em>
                 </section>
               </Label>
               <Input

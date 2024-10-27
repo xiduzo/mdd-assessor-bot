@@ -116,7 +116,7 @@ export function FeedbackDialog(props: {
               Regenerate feedback
             </Button>
           </section>
-          <ScrollArea className="max-h-[55vh] grow">
+          <ScrollArea className="max-h-[55vh] grow" key={props.indicator.name}>
             {!props.indicator.feedback && (
               <section className="h-60">
                 <Skeleton className="w-36 h-7 mb-2" />

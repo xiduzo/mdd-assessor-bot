@@ -108,6 +108,8 @@ function LlmAgent() {
           className={llmAgent({ status: status })}
           aria-label="Select your LLM assessor"
         >
+          {!status && <BotOff />}
+          {status === "error" && <BotOff />}
           {status === "initializing" && <BotOff />}
           {status === "initialized" && <Bot />}
           {model}

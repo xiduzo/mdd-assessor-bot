@@ -94,7 +94,7 @@ function CompetencyResult(props: {
           {props.competencyWithIndicators.name}
         </h2>
         <ol
-          className="space-y-2 mt-0.5"
+          className="space-y-2"
           aria-label={`Feedback for ${props.competencyWithIndicators.name} indicators`}
         >
           {props.competencyWithIndicators.indicators.map((indicator) => (
