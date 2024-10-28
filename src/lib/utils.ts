@@ -31,11 +31,19 @@ function toString(value: unknown): string {
   }
 }
 
-export function jsonToMarkdown(json: Record<string, unknown> = {}) {
+export function jsonToMarkdown(
+  json: Record<string, unknown> = {},
+  excludedKeys: string[] = [],
+) {
   let markdown = "";
 
   for (const item in json) {
-    if (item.toLowerCase() === "grade") continue;
+    if (excludedKeys.includes(item.toLowerCase())) continue;
+
+    const content = toString(json[item]);
+
+    if (!content || content === "") continue; // prevent rendering empty headers
+
     markdown += `# ${item.replaceAll("_", " ")}\n`;
     markdown += toString(json[item]);
     markdown += "\n\n";

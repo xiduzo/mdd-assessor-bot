@@ -1,8 +1,8 @@
 import {
-  competencies,
   competenciesWithIncidactors,
   Competency,
   feedback,
+  Feedback,
   Indicator,
 } from "@/lib/types";
 import { Document } from "@langchain/core/documents";
@@ -64,8 +64,6 @@ const competencyAndIndicatorDocuments = competenciesWithIncidactors.flatMap(
       indicatorText += indicator.expectations;
       indicatorText += `\n\n`;
 
-      indicatorText += `### Grading`;
-      indicatorText += `\n`;
       indicatorText += `| grade  | expectations   |`;
       indicatorText += `\n`;
       indicatorText += `|--------|----------------|`;
@@ -94,8 +92,7 @@ const competencyAndIndicatorDocuments = competenciesWithIncidactors.flatMap(
   },
 );
 
-const systemTemplate = `
-# IDENTITY and PURPOSE
+const systemTemplate = `# IDENTITY and PURPOSE
 You are acting as an assessor for a master's program in digital design.
 You will be giving constructive feedback on the student's text for them to improve upon.
 Your feedback will always be directed at the text provided and will refer to examples and evidence from the text.
@@ -114,47 +111,21 @@ A JSON feedback that matches the following schema:
 }}
 \`\`\`
 
-The grade field MUST always be on of the following four values: "novice", "competent", "proficient", or "visionary". Do not use any other values for the grade.
-Try to always include some positive aspects and areas for improvement in your feedback.
+# TONE OF VOICE
+Never use text from the examples provided below directly in your feedback, use it only as a tone-of-voice reference. Always refer to the student's text. If you use any text directly from the examples, the feedback will be considered invalid.
 
-# EXAMPLE OUTPUTS
-
-## Example 1
-\`\`\`json
-{{
-  "grade": "novice",
-  "feedback": "Your evolution, coming from a branding/advertising background but introducing a more “scientific” method has been super interesting to witness. We are glad that you have kept your fast intuitive decision making, but have also embraced the value of research, especially in non-commercial settings which require a different approach.",
-  "positive_aspects": [
-    "You have shown a commendable effort in pursuing your learning goals and relating them to your development. We appreciate the presentation that you have given us, and we think that it was a very strong example of self-directed learning. Your ethical standpoint clearly shines though.",
-    "Your exploration of ideas, technologies, and communities relevant to your work is evident and purposeful. You have demonstrated a systematic approach, actively connecting your explorations to your project. We applaud the consolation with different businessowners, and visually impaired people really helped your project forward. Highlighting the impact of these explorations on your personal development and future goals could enhance your reflection and really put you on an advantage as a designer (pun intended).",
-    "The choice of making the Havenstad project into a game where you play a stakeholder is an interesting take on a complex multi-stakeholder project like the one in the brief. It’s an interesting and promising approach and would have liked to see it validated by stakeholders themselves to understand if this could be a potential research method for future projects involving multi-stakeholder projects. ",
-  ],
-  "areas_for_improvement": [
-    "What we would like you to explore after the MDD is larger team dynamics, this will help you into a role of art director (which we can see is suiting for you if you want it to)",
-    "Actively engaging with stakeholders throughout the project helped your design process. However, a more exhaustive analysis of indirect stakeholders and unintended consequences could provide deeper insights. Overall, your comprehensive approach to stakeholder engagement strengthened the project's relevance and impact especially for the SDL and the Climbing project. We believe that you could have spent a little more time on creating a more nuanced view on the stakeholders. Not all people are likely to move to a new developed city part, it is often a subset of the City's population. With a more specific analysis you could have reached better design decisions."
-  ]
-}}
-\`\`\`
-
-## Example 2
-\`\`\`json
-{{
-  "grade": "competent",
-  "feedback": "Your annotated portfolio demonstrates a solid foundation in self-directed learning, particularly through your reflections on the methods used to achieve your goals, showcasing an understanding of your own learning processes. You effectively articulate your progress and future goals, relating them to a broader perspective, which shows your long-term vision. Your systematic approach and diverse research methods to understand the needs of visually impaired climbers are great, resulting in innovative solutions.",
-  "positive_aspects": [
-    "Your comment during the interview about how oversimplication can kill a project is very insightful and shows that you have a sophisticate understanding of what design can do to address complex topics. This kind of mentality is very much needed in our profession, keep it up!",
-  ],
-  "areas_for_improvement": [
-    "We see that you have expanded your knowledge in this area quite broadly. It would be good if you expand your range of references as well as you learn new techniques. We missed better evidence for the conventions indicator. Understanding how others addressed similar design challenges in the past can help you adopt these more conventional approaches when you need them and depart from them when they do not help you. ",
-    "You did not provide concrete examples of how you addressed potential unintended consequences and ensured user autonomy. When you compare your work to other work, more explicit identification of strong and weak points and how you plan to address them would provide clearer directions for future iterations."
-  ]
-}}
-\`\`\`
+- Overall, we see a lot of growth and learning in you. We enjoyed seeing a lot of making explorations in this project and using creative methods to explore ideas in a very open brief – nice!
+- We believe that you have learned a lor during this year. Your explorations and visits to Musea outside of the master are commendable. However, your reflection on teamwork is superficial. The answers that you gave during interview were convincing.  Overall, we think you have a grip on where you would like to go next.
+- Your critical reflection on your design in comparison to other work in the same space is lacking and that’s something we expect a master-level student to be able to do with ease.
+- Given the lack of a framing or debrief of the project presented it is hard to conduct appropriate research. The direction that the team took for this project seems to have taken you to an area where neither of you had any relevant knowledge and you were unable to bring the project back to an area where you could design again. Being able to do this is crucial for a designer at any level, bring the project to an area where you can design.
+- Overall, we can see you we see you are ready to start adventuring in UX and considering possible ways forward in product design. We encourage you to look at differences across different design domains (e.g. “product design” and “experience design”) and explore how you can build on your prior knowledge and practice in architecture and take advantage of the other domains you have started to explore.
+- Good that you have referenced some scientific articles in your research. Would like to have seen reference to other food-waste projects as part of research.
+- You did not provide concrete examples of how you addressed potential unintended consequences and ensured user autonomy. When you compare your work to other work, more explicit identification of strong and weak points and how you plan to address them would provide clearer directions for future iterations.
+- While the activities undertaken and their rationales are clearly listed, how they affected their work is not adequately articulated.
 
 # CONTEXT
 Use the following pieces of retrieved context to help you give a grade and provide feedback:
-{context}
-`;
+{context}`;
 
 const studentDocumentType = z.object({
   type: z.literal("student document"),
@@ -162,7 +133,6 @@ const studentDocumentType = z.object({
 
 const gradingTemplateType = z.object({
   type: z.literal("grading template"),
-  competency: z.enum(competencies),
   indicator: z.string(),
 });
 
@@ -294,7 +264,7 @@ export function LlmProvider(props: PropsWithChildren) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
 
-      const query = `given the competency ${competency} and indicator ${indicator.name}, what grade ("novice", "competent", "proficient", or "visionary") and feedback would you give the student?`;
+      const query = `given the indicator ${indicator.name}, what grade ("novice", "competent", "proficient", or "visionary"), feedback, positive points and areas for improvement would you give the student?`;
 
       console.log("query", query);
 
@@ -349,6 +319,15 @@ export function LlmProvider(props: PropsWithChildren) {
         );
 
         console.log("result", result, processed);
+        const metaData: Feedback["metaData"] = {
+          date: new Date(),
+          model: model,
+          embeddingsModel: embeddings,
+          prompt: systemTemplate + "\n\n" + query,
+          context: result.context ?? [],
+        };
+
+        processed.metaData = metaData;
         const data = feedback.parse(processed);
         setFeedback(competency, indicator.name, data);
       } catch (error) {
@@ -372,7 +351,7 @@ export function LlmProvider(props: PropsWithChildren) {
         await getGrading(competency, indicator, triesLeft - 1);
       }
     },
-    [runnable.current, setFeedback, documents],
+    [runnable.current, setFeedback, documents, model, embeddings],
   );
 
   const setModel = useCallback(
@@ -498,8 +477,7 @@ async function createVectorStore(
     competencyAndIndicatorDocuments.map((competency) => competency.text),
     competencyAndIndicatorDocuments.map(
       (competency): DocumentMetaData => ({
-        name: `${competency.competency} - ${competency.indicator}`,
-        competency: competency.competency,
+        name: competency.competency,
         indicator: competency.indicator,
         lastModified: Date.now(),
         type: "grading template",

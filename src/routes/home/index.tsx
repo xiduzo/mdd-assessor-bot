@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { useCelebration } from "@/providers/CelebrationProvider";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { useLlm } from "@/providers/LlmProvider";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
@@ -13,13 +14,19 @@ import { File, FileCheck, FilePlus, FileQuestion, Trash } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { useInterval } from "usehooks-ts";
+import { useInterval, useLocalStorage } from "usehooks-ts";
 
 const MEGA_BYTE = 1024 * 1024;
-const MAX_FILE_SIZE_IN_MB = 50;
+const MAX_FILE_SIZE_IN_MB = 100;
 const MAX_FILE_SIZE = MEGA_BYTE * MAX_FILE_SIZE_IN_MB;
 
 export function HomeRoute() {
+  const [isFistTimeFeedback, setIsFirstTimeFeedback] = useLocalStorage(
+    "first-time-feedback",
+    true,
+  );
+  const { celebrate } = useCelebration();
+
   const { documents, status } = useLlm();
   const { clearFeedback } = useFeedback();
   const navigate = useNavigate();
@@ -59,7 +66,7 @@ export function HomeRoute() {
             <section className={dropArea({ active: active })}>
               <Label
                 htmlFor="file"
-                aria-label={`Upload new files, PDF - max. ${MAX_FILE_SIZE_IN_MB} MB`}
+                aria-label={`Upload new files, PDF - max. ${MAX_FILE_SIZE_IN_MB} MB per file`}
                 className="flex flex-col items-center justify-end space-y-4"
               >
                 <FilePlus className="text-muted-foreground" />
@@ -69,7 +76,8 @@ export function HomeRoute() {
                     and drop
                   </div>
                   <em className="inline-block text-muted-foreground">
-                    <code>.pdf</code> files, max. {MAX_FILE_SIZE_IN_MB} MB
+                    <code>.pdf</code> files, max. {MAX_FILE_SIZE_IN_MB} MB per
+                    file
                   </em>
                 </section>
               </Label>
@@ -126,6 +134,10 @@ export function HomeRoute() {
             !documents.length || status !== "initialized" || !!files.length
           }
           onClick={() => {
+            if (isFistTimeFeedback) {
+              setIsFirstTimeFeedback(false);
+              celebrate("That's the spirit, you'll be going places!");
+            }
             clearFeedback();
             navigate("/result");
           }}
@@ -286,7 +298,7 @@ const fileStateTextColor = cva("", {
     uploadState: {
       uploading: "text-primary",
       error: "text-red-500",
-      success: "text-green-500",
+      success: "text-neutral-500",
     },
   },
 });
@@ -296,7 +308,7 @@ const fileUploaderCard = cva("transtition-all duration-300", {
     uploadState: {
       uploading: "",
       error: "bg-red-50",
-      success: "bg-green-50",
+      success: "bg-neutral-50",
     },
   },
 });

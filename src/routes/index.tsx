@@ -296,7 +296,9 @@ function MyDocuments() {
             <DialogHeader>
               <DialogTitle>{openDocument.name}</DialogTitle>
               <DialogDescription>
-                {format(openDocument.lastModified, "dd MMM yyyy HH:mm")}
+                ⚠️ The text below is extracted automatically from the uploaded
+                document. If there is content missing it is most likely due to
+                the document being not properly formatted.
               </DialogDescription>
             </DialogHeader>
             <ScrollArea className="max-h-[55vh] grow pr-4">
@@ -310,7 +312,7 @@ function MyDocuments() {
                   setOpenDocument(undefined);
                 }}
               >
-                Remove
+                Remove {openDocument.name}
               </Button>
             </DialogFooter>
           </DialogContent>

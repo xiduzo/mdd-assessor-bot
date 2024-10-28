@@ -1,3 +1,4 @@
+import { Document } from "@langchain/core/documents";
 import { z } from "zod";
 
 export const grades = [
@@ -25,6 +26,13 @@ export const feedback = z
       .refine((val) => grades.includes(val as Grade), {
         message: "Invalid enum value",
       }),
+    metaData: z.object({
+      date: z.date(),
+      model: z.string(),
+      embeddingsModel: z.string(),
+      prompt: z.string(),
+      context: z.instanceof(Document).array(),
+    }),
   })
   .passthrough();
 
