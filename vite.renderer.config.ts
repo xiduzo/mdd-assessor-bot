@@ -9,4 +9,9 @@ export default defineConfig({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      external: ["fs", "path", "os", "crypto"], // TODO: move all ollama stuff to main process and communicate via IPC
+    },
+  },
 });
