@@ -77,13 +77,12 @@ export function FeedbackDialog(props: {
     return [previousIndicator, nextIndicator];
   }, [competenciesWithIncidactors, props.competency, props.indicator]);
 
-  console.log(props.indicator.feedback?.metaData);
-
   useEffect(() => {
     const listener = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft" && previousIndicator) {
+      console.log(previousIndicator, nextIndicator);
+      if (e.key === "ArrowLeft" && !!previousIndicator) {
         showFeedback(previousIndicator);
-      } else if (e.key === "ArrowRight" && nextIndicator) {
+      } else if (e.key === "ArrowRight" && !!nextIndicator) {
         showFeedback(nextIndicator);
       }
     };

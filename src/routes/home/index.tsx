@@ -1,6 +1,7 @@
 import AnimatedGridPattern from "@/components/ui/animated-grid-pattern";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import FlickeringGrid from "@/components/ui/flickering-grid";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
@@ -10,7 +11,14 @@ import { useFeedback } from "@/providers/FeedbackProvider";
 import { useLlm } from "@/providers/LlmProvider";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { cva, VariantProps } from "class-variance-authority";
-import { File, FileCheck, FilePlus, FileQuestion, Trash } from "lucide-react";
+import {
+  File,
+  FileDigit,
+  FilePlus,
+  FileQuestion,
+  Sparkles,
+  Trash,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -143,6 +151,7 @@ export function HomeRoute() {
           }}
         >
           {!documents.length && "Upload documents to receive feedback"}
+          {!!documents.length && <Sparkles aria-hidden />}
           {!!documents.length && "I want feedback"}
         </Button>
         <a
@@ -158,11 +167,11 @@ export function HomeRoute() {
 }
 
 const dropArea = cva(
-  "hover:bg-muted bg-none transition-all max-h-72 min-h-24 h-[25vh] relative border-2 border-dashed rounded-lg flex items-center justify-center",
+  "hover:bg-muted/40 hover:border-primary/20 bg-none transition-all max-h-72 min-h-24 h-[25vh] relative border-2 border-dashed rounded-lg flex items-center justify-center",
   {
     variants: {
       active: {
-        true: "bg-muted border-primary/40",
+        true: "bg-muted/40 border-primary/20",
       },
     },
   },
@@ -224,12 +233,16 @@ function FileUploader(props: { file: File; removeFile: (file: File) => void }) {
           return;
         }
 
-        toast.success(props.file.name, {
-          description: "File uploaded successfully",
+        const processFile = toast.success(props.file.name, {
+          duration: 999_999,
+          dismissible: true,
+          description: "File uploaded successfully, processing data...",
         });
 
         setProgress(100);
-        setUploadState("success");
+        setTimeout(() => {
+          setUploadState("success");
+        }, 300);
         await addStudentDocuments([
           {
             name: props.file.name,
@@ -238,34 +251,31 @@ function FileUploader(props: { file: File; removeFile: (file: File) => void }) {
           },
         ]);
         props.removeFile(props.file);
-
-        // TODO make a nice animation to "move" into the folder
+        toast.dismiss(processFile);
       },
     );
   }, [props.file, props.removeFile]);
 
   return (
-    <Card className={fileUploaderCard({ uploadState: uploadState })}>
+    <Card className={fileUploaderCard({ uploadState })}>
       <CardHeader className="flex flex-row items-start text-start space-x-6 space-y-0">
         <section className="relative mt-0.5 flex items-center justify-center rounded-full">
           {uploadState === "uploading" && (
-            <div className="absolute animate-ping bg-primary/20 w-7 h-7 rounded-full"></div>
+            <div className="absolute animate-ping bg-foreground/10 w-7 h-7 rounded-full"></div>
           )}
-          {uploadState === "uploading" && (
-            <div className="absolute animate-pulse bg-primary/10 w-10 h-10 rounded-full"></div>
-          )}
+          <div className={fileIconBackground({ uploadState })}></div>
           {uploadState === "uploading" && <File className="z-10" size={20} />}
           {uploadState === "success" && (
-            <FileCheck className="text-green-500" size={20} />
+            <FileDigit size={20} className="text-green-900 z-10" />
           )}
           {uploadState === "error" && (
-            <FileQuestion className="text-red-500" size={20} />
+            <FileQuestion className="text-red-500 z-10" size={20} />
           )}
         </section>
         <section className="grow">
           <h2
             className={fileStateTextColor({
-              uploadState: uploadState,
+              uploadState,
               className: "font-semibold",
             })}
           >
@@ -287,28 +297,53 @@ function FileUploader(props: { file: File; removeFile: (file: File) => void }) {
         </Button>
       </CardHeader>
       <CardContent>
-        <Progress value={progress} />
+        {uploadState !== "success" && <Progress value={progress} />}
+        {uploadState === "success" && (
+          <div className="relative h-4 rounded-lg w-full bg-primary overflow-hidden">
+            <FlickeringGrid
+              className="z-0 absolute inset-0 size-full"
+              squareSize={16}
+              gridGap={0}
+              color="#ffffff"
+              maxOpacity={0.1}
+              flickerChance={0.3}
+            />
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
 
-const fileStateTextColor = cva("", {
+const fileIconBackground = cva(
+  "absolute w-10 h-10 rounded-full transition-all",
+  {
+    variants: {
+      uploadState: {
+        uploading: "bg-foreground/10 animate-pulse",
+        error: "bg-red-500",
+        success: "bg-green-400/10",
+      },
+    },
+  },
+);
+
+const fileStateTextColor = cva("transition-all", {
   variants: {
     uploadState: {
       uploading: "text-primary",
       error: "text-red-500",
-      success: "text-neutral-500",
+      success: "text-green-950",
     },
   },
 });
 
-const fileUploaderCard = cva("transtition-all duration-300", {
+const fileUploaderCard = cva("transtition-all", {
   variants: {
     uploadState: {
-      uploading: "",
-      error: "bg-red-50",
-      success: "bg-neutral-50",
+      uploading: "bg-background/30",
+      error: "bg-red-50/30",
+      success: "bg-green-50/30",
     },
   },
 });

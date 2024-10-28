@@ -19,7 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 export function ResultRoute() {
-  const { documents } = useLlm();
+  const { documents, status } = useLlm();
   const navigate = useNavigate();
   const previousDocumentsLength = useRef(documents.length);
 
@@ -53,7 +53,7 @@ export function ResultRoute() {
             Feedback
             <Button
               aria-label="Clear all feedback"
-              disabled={!documents.length}
+              disabled={!documents.length && status === "initialized"}
               variant="ghost"
               size="icon"
               onClick={() => clearFeedback()}

@@ -82,8 +82,8 @@ export async function getModel(
   }
 
   const downloadToast = toast.info(`${modelName} not found on your machine`, {
-    dismissible: false,
-    duration: 9999999999,
+    dismissible: true,
+    duration: 999_999,
     important: true,
     description: "Downloading model, this might take a while",
   });
@@ -117,9 +117,12 @@ export function postProcessResponse(input: Record<string, unknown>) {
         switch (typeof value) {
           case "object":
             if (value === null) break;
-            if ("level" in value) acc.grade = value.level;
-            if ("value" in value) acc.grade = value.value;
-            if ("grade" in value) acc.grade = value.grade;
+            if ("level" in value)
+              acc.grade = (value as Record<string, unknown>).level;
+            if ("value" in value)
+              acc.grade = (value as Record<string, unknown>).value;
+            if ("grade" in value)
+              acc.grade = (value as Record<string, unknown>).grade;
             break;
           case "number":
           case "string":

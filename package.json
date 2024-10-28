@@ -87,7 +87,7 @@
     "date-fns": "^3.6.0",
     "electron-squirrel-startup": "^1.0.1",
     "embla-carousel-react": "^8.3.0",
-    "framer-motion": "^11.11.9",
+    "framer-motion": "^11.11.10",
     "input-otp": "^1.2.4",
     "lucide-react": "^0.453.0",
     "ml-distance": "^4.0.1",
