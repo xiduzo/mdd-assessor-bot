@@ -1,4 +1,5 @@
 import { Document } from "@langchain/core/documents";
+import { ModelResponse } from "ollama";
 import { z } from "zod";
 
 export const grades = [
@@ -28,8 +29,8 @@ export const feedback = z
       }),
     metaData: z.object({
       date: z.date(),
-      model: z.string(),
-      embeddingsModel: z.string(),
+      model: z.custom<ModelResponse>(),
+      embeddingsModel: z.custom<ModelResponse>(),
       prompt: z.string(),
       context: z.instanceof(Document).array(),
     }),
@@ -51,6 +52,22 @@ const indicator = z.object({
   feedback: feedback.optional(),
 });
 export type Indicator = z.infer<typeof indicator>;
+
+const studentDocumentType = z.object({
+  type: z.literal("student document"),
+});
+
+const gradingTemplateType = z.object({
+  type: z.literal("grading reference"),
+  competency: z.enum(competencies),
+  indicator: z.string(),
+});
+
+const documentType = z.union([studentDocumentType, gradingTemplateType]);
+type DocumentType = z.infer<typeof documentType>;
+
+export type DocumentMetaData = Pick<File, "name" | "lastModified"> &
+  DocumentType;
 
 const competencyWithIndicators = z.object({
   name: z.enum(competencies),

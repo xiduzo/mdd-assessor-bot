@@ -97,8 +97,7 @@ function Layout(props: PropsWithChildren) {
 }
 
 function LlmAgent() {
-  const { models, model, setModel, embeddings, setEmbeddings, status } =
-    useLlm();
+  const { models, model, setModel, embeddings, status } = useLlm();
 
   return (
     <DropdownMenu>
@@ -112,7 +111,7 @@ function LlmAgent() {
           {status === "error" && <BotOff />}
           {status === "initializing" && <BotOff />}
           {status === "initialized" && <Bot />}
-          {model}
+          {model?.name ?? "No LLM selected"}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-52" align="end">
@@ -123,18 +122,16 @@ function LlmAgent() {
           </DropdownMenuSubTrigger>
           <DropdownMenuPortal>
             <DropdownMenuSubContent>
-              {models.map((m) => {
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={m.name}
-                    checked={m.name === model}
-                    disabled={m.name === model}
-                    onClick={() => setModel(m.name)}
-                  >
-                    <span>{m.name}</span>
-                  </DropdownMenuCheckboxItem>
-                );
-              })}
+              {models.map(({ name }) => (
+                <DropdownMenuCheckboxItem
+                  key={name}
+                  checked={name === model?.name}
+                  disabled={name === model?.name}
+                  onClick={() => setModel(name, "chat")}
+                >
+                  {name}
+                </DropdownMenuCheckboxItem>
+              ))}
             </DropdownMenuSubContent>
           </DropdownMenuPortal>
         </DropdownMenuSub>
@@ -145,18 +142,16 @@ function LlmAgent() {
           </DropdownMenuSubTrigger>
           <DropdownMenuPortal>
             <DropdownMenuSubContent>
-              {models.map((m) => {
-                return (
-                  <DropdownMenuCheckboxItem
-                    key={m.name}
-                    checked={m.name === embeddings}
-                    disabled={m.name === embeddings}
-                    onClick={() => setEmbeddings(m.name)}
-                  >
-                    <span>{m.name}</span>
-                  </DropdownMenuCheckboxItem>
-                );
-              })}
+              {models.map(({ name }) => (
+                <DropdownMenuCheckboxItem
+                  key={name}
+                  checked={name === embeddings?.name}
+                  disabled={name === embeddings?.name}
+                  onClick={() => setModel(name, "embeddings")}
+                >
+                  {name}
+                </DropdownMenuCheckboxItem>
+              ))}
             </DropdownMenuSubContent>
           </DropdownMenuPortal>
         </DropdownMenuSub>

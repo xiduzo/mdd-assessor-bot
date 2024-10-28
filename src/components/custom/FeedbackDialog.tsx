@@ -18,7 +18,7 @@ import { jsonToMarkdown } from "@/lib/utils";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { format } from "date-fns";
 import { ArrowLeft, ArrowRight, Copy } from "lucide-react";
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import Markdown from "react-markdown";
 import { toast } from "sonner";
 import { useCopyToClipboard } from "usehooks-ts";
@@ -78,6 +78,22 @@ export function FeedbackDialog(props: {
   }, [competenciesWithIncidactors, props.competency, props.indicator]);
 
   console.log(props.indicator.feedback?.metaData);
+
+  useEffect(() => {
+    const listener = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft" && previousIndicator) {
+        showFeedback(previousIndicator);
+      } else if (e.key === "ArrowRight" && nextIndicator) {
+        showFeedback(nextIndicator);
+      }
+    };
+
+    window.addEventListener("keydown", listener);
+
+    return () => {
+      window.removeEventListener("keydown", listener);
+    };
+  }, [previousIndicator, nextIndicator]);
 
   return (
     <Dialog
@@ -154,7 +170,7 @@ ${props.competency} - ${props.indicator.name}
 🤖 Generated feedback 🤖
 ========================
 
-${props.indicator.feedback?.metaData.model} matches you at a "${props.indicator.feedback?.grade}"
+${props.indicator.feedback?.metaData.model?.name} matches you at a "${props.indicator.feedback?.grade}"
 
 ${mardownFeedback}
 
@@ -166,8 +182,8 @@ Find more information on the [HvA website](https://www.hva.nl/bibliotheek/onders
 📝 How to cite 📝
 ========================
 # References
-Ollama. (${new Date().getFullYear()}). ${props.indicator.feedback?.metaData.model} (${format(props.indicator.feedback?.metaData.date ?? new Date(), "MMM dd")} version)[Large Language Model]
-Ollama. (${new Date().getFullYear()}). ${props.indicator.feedback?.metaData.embeddingsModel} (${format(props.indicator.feedback?.metaData.date ?? new Date(), "MMM dd")} version)[Large Language Model]
+Ollama. (${new Date().getFullYear()}). ${props.indicator.feedback?.metaData.model.name} (${format(props.indicator.feedback?.metaData.model.modified_at ?? new Date(), "MMM dd")} version)[Large Language Model]. Accessed on ${format(new Date(), "do MMM yyyy")}
+Ollama. (${new Date().getFullYear()}). ${props.indicator.feedback?.metaData.embeddingsModel.name} (${format(props.indicator.feedback?.metaData.embeddingsModel.modified_at ?? new Date(), "MMM dd")} version)[Large Language Model]. Accessed on ${format(new Date(), "do MMM yyyy")}
 
 ------------------------
 Generated using the following prompt
@@ -211,12 +227,13 @@ ${props.indicator.feedback?.metaData.prompt}
         </section>
         <div className="mt-3 italic text-muted-foreground text-center text-xs">
           Ollama. ({new Date().getFullYear()}).{" "}
-          {props.indicator.feedback?.metaData.model} (
+          {props.indicator.feedback?.metaData.model.name} (
           {format(
-            props.indicator.feedback?.metaData.date ?? new Date(),
+            props.indicator.feedback?.metaData.model.modified_at ?? new Date(),
             "MMM dd",
           )}{" "}
-          version)[Large Language Model]
+          version)[Large Language Model]. Accessed on{" "}
+          {format(new Date(), "do MMM yyyy")}
         </div>
         <DialogFooter className="grid grid-cols-2">
           <Button

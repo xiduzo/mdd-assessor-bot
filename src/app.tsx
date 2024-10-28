@@ -7,20 +7,19 @@ import { Router } from "@/routes";
 import { initParticlesEngine } from "@tsparticles/react";
 import { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { loadFull } from 'tsparticles';
+import { loadFull } from "tsparticles";
 import { CelebrationProvider } from "./providers/CelebrationProvider";
-
 
 function App() {
   const [init, setInit] = useState(false);
 
   useEffect(() => {
-		initParticlesEngine(async engine => {
-			await loadFull(engine);
-		}).then(() => {
-			setInit(true);
-		});
-	}, []);
+    initParticlesEngine(async (engine) => {
+      await loadFull(engine);
+    }).then(() => {
+      setInit(true);
+    });
+  }, []);
 
   return (
     <>
@@ -46,15 +45,21 @@ function FeedbackDialogInternal() {
   const { selectedFeedback } = useFeedback();
 
   const selectedCompetency = useMemo(() => {
-    if (!selectedFeedback) return;
+    if (!selectedFeedback) {
+      return;
+    }
 
     return competenciesWithIncidactors.find(({ indicators }) =>
       indicators.map(({ name }) => name).includes(selectedFeedback.name),
     )?.name;
   }, [selectedFeedback]);
 
-  if (!selectedFeedback) return null;
-  if (!selectedCompetency) return null;
+  if (!selectedFeedback) {
+    return null;
+  }
+  if (!selectedCompetency) {
+    return null;
+  }
 
   return (
     <FeedbackDialog
