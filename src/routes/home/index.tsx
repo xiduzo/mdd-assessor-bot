@@ -1,3 +1,4 @@
+import { ParrotHead } from "@/components/custom/ParrotHead";
 import AnimatedGridPattern from "@/components/ui/animated-grid-pattern";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -48,16 +49,16 @@ export function HomeRoute() {
 
   return (
     <>
-      <article className="text-center flex flex-col space-y-12 h-[85vh]">
-        <header className="flex flex-col items-center mt-0 space-y-6">
-          <div className="w-40 h-40 rounded-full bg-purple-400"></div>
+      <article className="text-center flex flex-col space-y-12">
+        <header className="flex flex-col items-center">
+          <ParrotHead className="w-40 h-40" />
           <h1 className="font-semibold text-4xl">
             Let's review your documents 👀
           </h1>
           <AnimatedGridPattern
-            maxOpacity={0.05}
+            maxOpacity={0.1}
             numSquares={30}
-            y={-14}
+            y={8}
             className={cn(
               `[mask-image:radial-gradient(800px_circle_at_top,white,transparent,transparent)]`,
               `lg:[mask-image:radial-gradient(900px_circle_at_top,white,transparent,transparent)]`,
