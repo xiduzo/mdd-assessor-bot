@@ -61,6 +61,10 @@ typings/
 .env
 .env.test
 
+# osx signing
+*.p12
+*.provisionprofile
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 
