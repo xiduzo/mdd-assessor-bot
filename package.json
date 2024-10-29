@@ -2,12 +2,12 @@
   "name": "mdd-assessment-bot",
   "productName": "mdd-assessment-bot",
   "version": "0.1.0",
-  "description": "An LLM experiment for providing students with feedback",
+  "description": "A LLM experiment for providing students with feedback",
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",
     "package": "electron-forge package",
-    "make": "electron-forge make",
+    "make": "DEBUG=electron-osx electron-forge make",
     "publish": "electron-forge publish",
     "lint": "eslint --ext .ts,.tsx ."
   },
@@ -51,7 +51,7 @@
     "type": "git",
     "url": "https://github.com/xiduzo/mdd-assessment-bot"
   },
-  "license": "MIT",
+  "license": "GPL-3.0-only",
   "dependencies": {
     "@formkit/auto-animate": "^0.8.2",
     "@hookform/resolvers": "^3.9.0",

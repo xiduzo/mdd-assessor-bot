@@ -18,7 +18,7 @@ const config: ForgeConfig = {
     icon: "assets/icon",
     asar: true,
     osxSign: {
-      // strictVerify: false,
+      strictVerify: false,
       identity: process.env.APPLE_IDENTITY, // https://github.com/electron/forge/issues/3131#issuecomment-2237818679
     },
     osxNotarize: {
