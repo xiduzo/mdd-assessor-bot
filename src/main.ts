@@ -5,14 +5,12 @@ import path from "path";
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
 import { PdfReader } from "pdfreader";
-import { updateElectronApp } from 'update-electron-app';
+import { updateElectronApp } from "update-electron-app";
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
 
-updateElectronApp({
-
-})
+updateElectronApp();
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
 if (Squirrel) {
