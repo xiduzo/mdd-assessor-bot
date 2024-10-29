@@ -32,8 +32,16 @@ const config: ForgeConfig = {
   makers: [
     new MakerSquirrel({}),
     new MakerZIP({}, ["darwin"]),
-    new MakerRpm({}),
-    new MakerDeb({}),
+    new MakerRpm({
+      options: {
+        bin: "MDD assessment bot",
+      },
+    }),
+    new MakerDeb({
+      options: {
+        bin: "MDD assessment bot",
+      },
+    }),
     new MakerDMG({
       appPath: "out/make/mdd-assessment-bot-darwin-x64/mdd-assessment-bot.app",
     }),
