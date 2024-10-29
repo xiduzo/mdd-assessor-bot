@@ -1,6 +1,6 @@
 # MDD assessor bot
 
-This repository contains the `MDD assessort bot`, a LLM experiment for providing students with feedback.
+This repository contains the `MDD assessor bot`, a LLM experiment for providing students with feedback.
 
 ## Pre-requisites
 

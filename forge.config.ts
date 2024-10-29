@@ -88,7 +88,7 @@ const config: ForgeConfig = {
       config: {
         repository: {
           owner: "xiduzo",
-          name: "mdd-assessment-bot",
+          name: "mdd-assessor-bot",
         },
         prerelease: true,
       },

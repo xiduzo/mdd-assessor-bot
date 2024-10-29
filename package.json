@@ -43,13 +43,13 @@
   },
   "keywords": [],
   "author": {
-    "name": "Sander",
+    "name": "xiduzo",
     "email": "mail@sanderboer.nl",
     "url": "https://sanderboer.nl"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/xiduzo/mdd-assessment-bot"
+    "url": "https://github.com/xiduzo/mdd-assessor-bot"
   },
   "license": "GPL-3.0-only",
   "dependencies": {
