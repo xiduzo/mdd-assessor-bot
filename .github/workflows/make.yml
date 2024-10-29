@@ -68,7 +68,7 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
       # https://localazy.com/blog/how-to-automatically-sign-macos-apps-using-github-actions
       - name: Make application
