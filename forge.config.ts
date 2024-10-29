@@ -13,12 +13,12 @@ dotenvConfig();
 
 const config: ForgeConfig = {
   packagerConfig: {
-    name: "MDD assessment bot",
-    executableName: "MDD assessment bot",
+    name: "MDD assessor bot",
+    executableName: "MDD assessor bot",
     icon: "assets/icon",
     asar: true,
     osxSign: {
-      strictVerify: false,
+      // strictVerify: false,
       identity: process.env.APPLE_IDENTITY, // https://github.com/electron/forge/issues/3131#issuecomment-2237818679
     },
     osxNotarize: {
@@ -34,12 +34,12 @@ const config: ForgeConfig = {
     new MakerZIP({}, ["darwin"]),
     new MakerRpm({
       options: {
-        bin: "MDD assessment bot",
+        bin: "MDD assessor bot",
       },
     }),
     new MakerDeb({
       options: {
-        bin: "MDD assessment bot",
+        bin: "MDD assessor bot",
       },
     }),
     new MakerDMG({
