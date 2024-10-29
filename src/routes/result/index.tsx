@@ -10,6 +10,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { Competency, CompetencyWithIndicators, Indicator } from "@/lib/types";
 import { useFeedback } from "@/providers/FeedbackProvider";
 import { useLlm } from "@/providers/LlmProvider";
@@ -51,15 +57,24 @@ export function ResultRoute() {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             Feedback
-            <Button
-              aria-label="Clear all feedback"
-              disabled={!documents.length && status === "initialized"}
-              variant="ghost"
-              size="icon"
-              onClick={() => clearFeedback()}
-            >
-              <RotateCcw />
-            </Button>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    aria-label="Clear all feedback"
+                    disabled={!documents.length && status === "initialized"}
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => clearFeedback()}
+                  >
+                    <RotateCcw />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Regenerate all feedback</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </CardTitle>
           <CardDescription>
             <em>/ˈfiːd.bæk/</em>

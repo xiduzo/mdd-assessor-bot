@@ -1,9 +1,8 @@
-import { SYSTEM_TEMPLATE } from "@/lib/systemTemplate";
+import { FEEDBACK_TEMPLATE } from "@/lib/systemTemplates";
 import { competenciesWithIncidactors, DocumentMetaData } from "@/lib/types";
 import { Document } from "@langchain/core/documents";
 import { LanguageModelLike } from "@langchain/core/language_models/base";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
-import {} from "@langchain/core/tools";
 import { OllamaEmbeddings } from "@langchain/ollama";
 import {
   MarkdownTextSplitter,
@@ -12,8 +11,7 @@ import {
 import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
 import { createRetrievalChain } from "langchain/chains/retrieval";
 import { MemoryVectorStore } from "langchain/vectorstores/memory";
-import ollama, { ModelResponse } from "ollama";
-import { toast } from "sonner";
+import { type ModelResponse } from "ollama";
 
 // TODO: allow the user to set the embeddings model params
 export const competencySplitter = new MarkdownTextSplitter({
@@ -49,6 +47,7 @@ export async function createVectorStore(
   );
 }
 
+// TODO: look into https://js.langchain.com/docs/how_to/qa_chat_history_how_to/#tying-it-together
 export async function createRunner(
   llm: LanguageModelLike,
   vectorStore: MemoryVectorStore,
@@ -56,7 +55,8 @@ export async function createRunner(
   const retriever = vectorStore.asRetriever();
 
   const prompt = ChatPromptTemplate.fromMessages([
-    ["system", SYSTEM_TEMPLATE],
+    ["system", FEEDBACK_TEMPLATE],
+    // new MessagesPlaceholder("chat_history"),
     ["human", "{input}"],
   ]);
 
@@ -69,38 +69,6 @@ export async function createRunner(
     retriever,
     combineDocsChain: questionAnswerChain,
   });
-}
-
-export async function getModel(
-  modelName: string,
-  availableModels: ModelResponse[],
-): Promise<ModelResponse | null> {
-  const model = availableModels.find(({ name }) => name === modelName);
-
-  if (model) {
-    return model;
-  }
-
-  const downloadToast = toast.info(`${modelName} not found on your machine`, {
-    dismissible: true,
-    duration: 999_999,
-    important: true,
-    description: "Downloading model, this might take a while",
-  });
-
-  const response = await ollama.pull({ model: modelName });
-
-  if (response.status === "success") {
-    await new Promise((resolve) => setTimeout(resolve, 3000)); // Give some time for the model to be available
-    toast.dismiss(downloadToast);
-    return getModel(modelName, availableModels);
-  }
-
-  toast.warning(`Model ${modelName} is not available`, {
-    description: "Please select another model",
-  });
-
-  return null;
 }
 
 export function postProcessResponse(input: Record<string, unknown>) {

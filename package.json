@@ -1,8 +1,8 @@
 {
-  "name": "llm-app",
-  "productName": "llm-app",
-  "version": "1.0.0",
-  "description": "My Electron application description",
+  "name": "mdd-assessment-bot",
+  "productName": "mdd-assessment-bot",
+  "version": "0.1.0",
+  "description": "A LLM experiment for providing students with feedback",
   "main": ".vite/build/main.js",
   "scripts": {
     "start": "electron-forge start",
@@ -14,19 +14,23 @@
   "devDependencies": {
     "@electron-forge/cli": "^7.5.0",
     "@electron-forge/maker-deb": "^7.5.0",
+    "@electron-forge/maker-dmg": "^7.5.0",
     "@electron-forge/maker-rpm": "^7.5.0",
     "@electron-forge/maker-squirrel": "^7.5.0",
     "@electron-forge/maker-zip": "^7.5.0",
     "@electron-forge/plugin-auto-unpack-natives": "^7.5.0",
     "@electron-forge/plugin-fuses": "^7.5.0",
     "@electron-forge/plugin-vite": "^7.5.0",
+    "@electron-forge/publisher-github": "^7.5.0",
     "@electron/fuses": "^1.8.0",
+    "@types/electron-squirrel-startup": "^1.0.2",
     "@types/node": "^22.7.7",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
     "@typescript-eslint/eslint-plugin": "^5.62.0",
     "@typescript-eslint/parser": "^5.62.0",
     "autoprefixer": "^10.4.20",
+    "dotenv": "^16.4.5",
     "electron": "33.0.1",
     "eslint": "^8.57.1",
     "eslint-import-resolver-typescript": "^3.6.3",
@@ -40,9 +44,14 @@
   "keywords": [],
   "author": {
     "name": "Sander",
-    "email": "mail@sanderboer.nl"
+    "email": "mail@sanderboer.nl",
+    "url": "https://sanderboer.nl"
   },
-  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xiduzo/mdd-assessment-bot"
+  },
+  "license": "GPL-3.0-only",
   "dependencies": {
     "@formkit/auto-animate": "^0.8.2",
     "@hookform/resolvers": "^3.9.0",
@@ -106,6 +115,7 @@
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
     "tsparticles": "^3.5.0",
+    "update-electron-app": "^3.0.0",
     "usehooks-ts": "^3.1.0",
     "vaul": "^1.1.0",
     "zod": "^3.23.8"

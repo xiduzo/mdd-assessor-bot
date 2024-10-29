@@ -1,3 +1,4 @@
+import { ParrotHead } from "@/components/custom/ParrotHead";
 import AnimatedGridPattern from "@/components/ui/animated-grid-pattern";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -48,20 +49,20 @@ export function HomeRoute() {
 
   return (
     <>
-      <article className="text-center flex flex-col space-y-12 h-[85vh]">
-        <header className="flex flex-col items-center mt-0 space-y-6">
-          <div className="w-40 h-40 rounded-full bg-purple-400"></div>
+      <article className="text-center flex flex-col space-y-12">
+        <header className="flex flex-col items-center">
+          <ParrotHead className="w-40 h-40" />
           <h1 className="font-semibold text-4xl">
             Let's review your documents 👀
           </h1>
           <AnimatedGridPattern
-            maxOpacity={0.05}
+            maxOpacity={0.1}
             numSquares={30}
-            y={-14}
+            y={8}
             className={cn(
-              `[mask-image:radial-gradient(600px_circle_at_top,white,transparent,transparent)]`,
-              `lg:[mask-image:radial-gradient(800px_circle_at_top,white,transparent,transparent)]`,
-              `2xl:[mask-image:radial-gradient(1080px_circle_at_top,white,transparent,transparent)]`,
+              `[mask-image:radial-gradient(800px_circle_at_top,white,transparent,transparent)]`,
+              `lg:[mask-image:radial-gradient(900px_circle_at_top,white,transparent,transparent)]`,
+              `2xl:[mask-image:radial-gradient(1000px_circle_at_top,white,transparent,transparent)]`,
               "inset-x-0 -inset-y-10 -z-10",
             )}
           />
@@ -186,12 +187,8 @@ function FileUploader(props: { file: File; removeFile: (file: File) => void }) {
 
   useInterval(
     () => {
-      console.log("interval");
       setProgress((prev) => {
-        if (prev >= 100) {
-          return 100;
-        }
-
+        if (prev >= 100) return 100;
         return Math.min(95, prev + Math.random() * 2);
       });
     },
@@ -233,10 +230,8 @@ function FileUploader(props: { file: File; removeFile: (file: File) => void }) {
           return;
         }
 
-        const processFile = toast.success(props.file.name, {
-          duration: 999_999,
-          dismissible: true,
-          description: "File uploaded successfully, processing data...",
+        toast.success(props.file.name, {
+          description: "File uploaded successfully",
         });
 
         setProgress(100);
@@ -251,7 +246,6 @@ function FileUploader(props: { file: File; removeFile: (file: File) => void }) {
           },
         ]);
         props.removeFile(props.file);
-        toast.dismiss(processFile);
       },
     );
   }, [props.file, props.removeFile]);
