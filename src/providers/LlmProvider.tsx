@@ -2,21 +2,14 @@ import {
   createRunner,
   createVectorStore,
   documentSplitter,
-  getModel,
   postProcessResponse,
 } from "@/lib/llm";
-import { SYSTEM_TEMPLATE } from "@/lib/systemTemplate";
-import {
-  Competency,
-  DocumentMetaData,
-  feedback,
-  Feedback,
-  Indicator,
-} from "@/lib/types";
+import { FEEDBACK_TEMPLATE } from "@/lib/systemTemplates";
+import { Competency, DocumentMetaData, feedback, Indicator } from "@/lib/types";
 import { Document } from "@langchain/core/documents";
-import {} from "@langchain/core/tools";
+import { BaseMessage } from "@langchain/core/messages";
 import { Ollama } from "@langchain/ollama";
-import ollama, { ModelResponse } from "ollama";
+import { type ModelResponse } from "ollama";
 import {
   createContext,
   PropsWithChildren,
@@ -152,32 +145,31 @@ export function LlmProvider(props: PropsWithChildren) {
       while (!runnable.current) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
+      const chatHistory: BaseMessage[] = [];
 
-      const query = `what grade ("novice", "competent", "proficient", or "visionary"), feedback, positive points and areas for improvement would you give the student for given the competency ${competency} and indicator ${indicator.name}?`;
+      chatHistory.push();
 
-      console.log("query", query);
+      const query = `what grade ("novice", "competent", "proficient", or "visionary") and feedback would you give the student for given the competency ${competency} and indicator ${indicator.name}?`;
 
       try {
-        // TODO: cancel the request if the component is unmounted
         const result = await runnable.current.invoke({ input: query });
         const json = JSON.parse(result.answer);
 
         if (typeof json !== "object") return;
 
         const processed = postProcessResponse(json);
-
-        const metaData: Feedback["metaData"] = {
-          date: new Date(),
-          model: model,
-          embeddingsModel: embeddings,
-          prompt: SYSTEM_TEMPLATE + "\n\n" + query,
-          context: result.context,
-        };
-
-        processed.metaData = metaData;
         console.log("result", result, processed);
 
-        const data = feedback.parse(processed);
+        const data = feedback.parse({
+          ...processed,
+          metaData: {
+            date: new Date(),
+            model: model,
+            embeddingsModel: embeddings,
+            prompt: FEEDBACK_TEMPLATE + "\n\n" + query,
+            context: result.context,
+          },
+        });
         setFeedback(competency, indicator.name, data);
       } catch (error) {
         if (error instanceof ZodError) {
@@ -209,7 +201,7 @@ export function LlmProvider(props: PropsWithChildren) {
         return;
       }
 
-      const model = await getModel(modelName, models);
+      const model = models.find(({ name }) => name === modelName) ?? null;
 
       switch (modelType) {
         case "chat":
@@ -230,12 +222,13 @@ export function LlmProvider(props: PropsWithChildren) {
     if (!model) return;
     if (!embeddings) return;
 
+    console.log(model);
     const llm = new Ollama({
       model: model.name,
       numCtx: 1000,
       format: "json",
-      temperature: 0.3,
-      embeddingOnly: true,
+      // temperature: 0.2,
+      // embeddingOnly: true,
       // frequencyPenalty: 1.6,
       // repeatPenalty: 1.8,
       // mirostatTau: 3,
@@ -255,22 +248,11 @@ export function LlmProvider(props: PropsWithChildren) {
   }, [models, model, embeddings, documents]);
 
   useEffect(() => {
-    ollama
-      .list()
-      .then((response) => {
-        setModels(response.models);
-      })
-      .catch((error) => {
-        toast.error("Unable to connect to ollama", {
-          description: error.message,
-          action: {
-            label: "Get ollama",
-            onClick: () => window.open("https://ollama.com/"),
-          },
-        });
+    window.electron.ipcRenderer.send("get-models");
 
-        setStatus("error");
-      });
+    window.electron.ipcRenderer.on<ModelResponse[]>("models", (event) => {
+      setModels(event);
+    });
   }, []);
 
   return (

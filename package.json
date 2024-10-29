@@ -23,6 +23,7 @@
     "@electron-forge/plugin-vite": "^7.5.0",
     "@electron-forge/publisher-github": "^7.5.0",
     "@electron/fuses": "^1.8.0",
+    "@types/electron-squirrel-startup": "^1.0.2",
     "@types/node": "^22.7.7",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.1",
@@ -45,6 +46,10 @@
     "name": "Sander",
     "email": "mail@sanderboer.nl",
     "url": "https://sanderboer.nl"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xiduzo/mdd-assessment-bot"
   },
   "license": "MIT",
   "dependencies": {
@@ -110,6 +115,7 @@
     "tailwind-merge": "^2.5.4",
     "tailwindcss-animate": "^1.0.7",
     "tsparticles": "^3.5.0",
+    "update-electron-app": "^3.0.0",
     "usehooks-ts": "^3.1.0",
     "vaul": "^1.1.0",
     "zod": "^3.23.8"

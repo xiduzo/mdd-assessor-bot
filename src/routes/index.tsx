@@ -36,8 +36,8 @@ import {
 } from "lucide-react";
 import { PropsWithChildren, useEffect, useMemo, useState } from "react";
 import {
-  BrowserRouter,
   createBrowserRouter,
+  MemoryRouter,
   Route,
   Routes,
   useLocation,
@@ -59,14 +59,14 @@ export const router = createBrowserRouter([
 
 export function Router() {
   return (
-    <BrowserRouter future={{ v7_startTransition: true }}>
+    <MemoryRouter future={{ v7_startTransition: true }}>
       <Layout>
         <Routes>
           <Route path="/" Component={HomeRoute} />
           <Route path="/result" Component={ResultRoute} />
         </Routes>
       </Layout>
-    </BrowserRouter>
+    </MemoryRouter>
   );
 }
 
@@ -104,7 +104,7 @@ function LlmAgent() {
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className={llmAgent({ status: status })}
+          className={llmAgentButton({ status: status })}
           aria-label="Select your LLM assessor"
         >
           {!status && <BotOff />}
@@ -116,9 +116,16 @@ function LlmAgent() {
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-52" align="end">
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger
+            className={llmOptionModel({ modelSelected: !!model })}
+          >
             <BotMessageSquare size={16} className="mr-2" />
-            <span>Feedback model</span>
+            <section className="flex flex-col">
+              <span>Feedback model</span>
+              <span className="text-xs text-muted-foreground">
+                {model?.name}
+              </span>
+            </section>
           </DropdownMenuSubTrigger>
           <DropdownMenuPortal>
             <DropdownMenuSubContent>
@@ -136,9 +143,16 @@ function LlmAgent() {
           </DropdownMenuPortal>
         </DropdownMenuSub>
         <DropdownMenuSub>
-          <DropdownMenuSubTrigger>
+          <DropdownMenuSubTrigger
+            className={llmOptionModel({ modelSelected: !!embeddings })}
+          >
             <FileDigit size={16} className="mr-2" />
-            <span>Embeddings model</span>
+            <section className="flex flex-col">
+              <span>Embeddings model</span>
+              <span className="text-xs text-muted-foreground">
+                {embeddings?.name}
+              </span>
+            </section>
           </DropdownMenuSubTrigger>
           <DropdownMenuPortal>
             <DropdownMenuSubContent>
@@ -160,12 +174,21 @@ function LlmAgent() {
   );
 }
 
-const llmAgent = cva("", {
+const llmAgentButton = cva("", {
   variants: {
     status: {
-      initializing: "animate-pulse",
+      initializing: "animate-pulse text-muted-foreground",
       initialized: "",
-      error: "text-red-500",
+      error: "text-red-600 hover:text-red-500",
+    },
+  },
+});
+
+const llmOptionModel = cva("", {
+  variants: {
+    modelSelected: {
+      true: "",
+      false: "text-red-500",
     },
   },
 });
@@ -238,7 +261,7 @@ function MyDocuments() {
             variant="ghost"
             size="icon"
             className="relative"
-            aria-label={`View my uploaded documents (${myDocuments.length} documents)`}
+            aria-label={`View your uploaded documents (${myDocuments.length} documents)`}
           >
             {isOpen ? <FolderOpen /> : <Folder />}
             <Badge
@@ -291,9 +314,11 @@ function MyDocuments() {
             <DialogHeader>
               <DialogTitle>{openDocument.name}</DialogTitle>
               <DialogDescription>
-                ⚠️ The text below is extracted automatically from the uploaded
-                document. If there is content missing it is most likely due to
-                the document being not properly formatted.
+                ⚠️ The following text has been automatically extracted from the
+                uploaded document. If you notice any missing content, it may be
+                due to improper formatting of the original document. Please
+                ensure that the document is correctly formatted for optimal
+                extraction results.
               </DialogDescription>
             </DialogHeader>
             <ScrollArea className="max-h-[55vh] grow pr-4">

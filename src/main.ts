@@ -1,14 +1,21 @@
 import { app, BrowserWindow, ipcMain } from "electron";
+import Squirrel from "electron-squirrel-startup";
+import ollama from "ollama";
 import path from "path";
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
 import { PdfReader } from "pdfreader";
+import { updateElectronApp } from 'update-electron-app';
 
 declare const MAIN_WINDOW_VITE_DEV_SERVER_URL: string;
 declare const MAIN_WINDOW_VITE_NAME: string;
 
+updateElectronApp({
+
+})
+
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (require("electron-squirrel-startup")) {
+if (Squirrel) {
   app.quit();
 }
 
@@ -83,4 +90,13 @@ ipcMain.on("pdf-parse", (event, fileData, fileName) => {
       return;
     }
   });
+});
+
+ipcMain.on("get-models", async (event) => {
+  try {
+    const models = await ollama.list();
+    event.reply("models", models.models);
+  } catch {
+    event.reply("models", []);
+  }
 });
