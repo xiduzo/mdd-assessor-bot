@@ -27,7 +27,7 @@ export const feedback = z
         message: "Invalid enum value",
       }),
     metaData: z.object({
-      date: z.date(),
+      date: z.date().default(new Date()),
       model: z.custom<ModelResponse>(),
       prompt: z.string(),
     }),

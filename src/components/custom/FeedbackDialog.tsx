@@ -164,11 +164,10 @@ ${disclaimer}
 🤖 Generated feedback 🤖
 
 ${props.competency} - ${props.indicator.name}
+${props.indicator.feedback?.metaData.model?.name} matches you at a "${props.indicator.feedback?.grade}"
 
 🤖 Generated feedback 🤖
 ========================
-
-${props.indicator.feedback?.metaData.model?.name} matches you at a "${props.indicator.feedback?.grade}"
 
 ${mardownFeedback}
 
@@ -182,12 +181,10 @@ Find more information on the [HvA website](https://www.hva.nl/bibliotheek/onders
 # References
 Ollama. (${new Date().getFullYear()}). ${props.indicator.feedback?.metaData.model.name} (${format(props.indicator.feedback?.metaData.model.modified_at ?? new Date(), "MMM dd")} version)[Large Language Model]. Accessed on ${format(new Date(), "do MMM yyyy")}
 
-------------------------
+========================
 Generated using the following prompt
-------------------------
-${props.indicator.feedback?.metaData.prompt}
-
-`);
+========================
+${props.indicator.feedback?.metaData.prompt}`);
                 if (isCopied) {
                   toast.success("Feedback copied to clipboard");
                 } else {

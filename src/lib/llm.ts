@@ -1,19 +1,4 @@
 import { competenciesWithIncidactors } from "@/lib/types";
-import {
-  MarkdownTextSplitter,
-  RecursiveCharacterTextSplitter,
-} from "@langchain/textsplitters";
-
-// TODO: allow the user to set the embeddings model params
-export const competencySplitter = new MarkdownTextSplitter({
-  chunkSize: 500,
-  chunkOverlap: 20,
-});
-
-export const documentSplitter = new RecursiveCharacterTextSplitter({
-  chunkSize: 300,
-  chunkOverlap: 20,
-});
 
 export function postProcessResponse(input: Record<string, unknown>) {
   return Object.keys(input).reduce(
@@ -22,9 +7,15 @@ export function postProcessResponse(input: Record<string, unknown>) {
       const lowerKey = key.toLowerCase();
 
       if (
-        ["grade", "grading", "score", "rating", "overall", "result"].includes(
-          lowerKey,
-        )
+        [
+          "grade",
+          "grading",
+          "score",
+          "rating",
+          "overall",
+          "result",
+          "value",
+        ].includes(lowerKey)
       ) {
         switch (typeof value) {
           case "object":
@@ -87,8 +78,6 @@ export const INDICATOR_DOCUMENTS = competenciesWithIncidactors.flatMap(
         indicatorText += `|`;
         indicatorText += `\n`;
       });
-
-      console.log(indicatorText);
 
       return { indicator, indicatorText };
     });

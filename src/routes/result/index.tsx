@@ -137,7 +137,7 @@ function CompetencyIndicator(props: {
     if (status !== "initialized") return;
     if (props.indicator.feedback) return;
 
-    getGrading(props.competency, { name: props.indicator.name });
+    getGrading(props.competency, props.indicator.name);
   }, [props.indicator.feedback, props.competency, status, getGrading]);
 
   return (

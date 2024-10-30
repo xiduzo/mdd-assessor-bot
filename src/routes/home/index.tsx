@@ -238,7 +238,7 @@ function FileUploader(props: { file: File; removeFile: (file: File) => void }) {
         setTimeout(() => {
           setUploadState("success");
         }, 300);
-        await addStudentDocuments([
+        addStudentDocuments([
           {
             name: props.file.name,
             lastModified: props.file.lastModified,

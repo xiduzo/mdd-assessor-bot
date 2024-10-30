@@ -1,6 +1,6 @@
 import { INDICATOR_DOCUMENTS, postProcessResponse } from "@/lib/llm";
 import { FEEDBACK_TEMPLATE } from "@/lib/systemTemplates";
-import { Competency, feedback, Indicator, StudentDocument } from "@/lib/types";
+import { Competency, feedback, StudentDocument } from "@/lib/types";
 import { LanguageModelLike } from "@langchain/core/language_models/base";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { Ollama } from "@langchain/ollama";
@@ -21,7 +21,7 @@ import { ZodError } from "zod";
 import { useFeedback } from "./FeedbackProvider";
 
 type LmmContextType = {
-  addStudentDocuments: (input: StudentDocument[]) => Promise<void>;
+  addStudentDocuments: (input: StudentDocument[]) => void;
   removeStudentDocuments: (input: Pick<File, "name">[]) => void;
   documents: StudentDocument[];
   models: ModelResponse[];
@@ -30,7 +30,7 @@ type LmmContextType = {
   status: "initializing" | "initialized" | "error" | undefined;
   getGrading: (
     competency: Competency,
-    indicator: Pick<Indicator, "name">,
+    indicator: string,
     triesLeft?: number,
   ) => Promise<void>;
 };
@@ -70,7 +70,7 @@ export function LlmProvider(props: PropsWithChildren) {
   const { setFeedback } = useFeedback();
 
   const removeStudentDocuments = useCallback(
-    async (documents: Pick<File, "name">[]) => {
+    (documents: Pick<File, "name">[]) => {
       const fileNamesToDelete = documents.map(({ name }) => name);
       setDocuments((prev) =>
         prev.filter(({ name }) => !fileNamesToDelete.includes(name)),
@@ -80,19 +80,15 @@ export function LlmProvider(props: PropsWithChildren) {
   );
 
   const addStudentDocuments = useCallback(
-    async (files: StudentDocument[]) => {
-      await removeStudentDocuments(files);
+    (files: StudentDocument[]) => {
+      removeStudentDocuments(files);
       setDocuments((prev) => [...prev, ...files]);
     },
     [removeStudentDocuments],
   );
 
   const getGrading = useCallback(
-    async (
-      competency: Competency,
-      indicator: Pick<Indicator, "name">,
-      triesLeft = 20, // TODO: this mostly fails because the `grade` is not present in the resonse, a better prompt will help
-    ) => {
+    async (competency: Competency, indicator: string, triesLeft = 5) => {
       if (!documents.length) return;
       if (!model) return;
 
@@ -100,54 +96,43 @@ export function LlmProvider(props: PropsWithChildren) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
 
-      const query = `what grade ("novice", "competent", "proficient", or "visionary") and feedback would you give the student for given the competency ${competency} and indicator ${indicator.name}?`;
+      const query = `what grade ("novice", "competent", "proficient", or "visionary") and feedback would you give the student for given the competency ${competency} and indicator ${indicator}?`;
 
       const indicatorText = INDICATOR_DOCUMENTS.find(
         (text) =>
-          text.indicator === indicator.name && text.competency === competency,
+          text.indicator === indicator && text.competency === competency,
       );
 
-      console.log(query, indicatorText);
       if (!indicatorText) return;
 
       try {
-        const result = await llm.current.invoke([
+        const chat: (SystemMessage | HumanMessage)[] = [
           new SystemMessage(
             FEEDBACK_TEMPLATE.replace("{indicator_text}", indicatorText.text),
           ),
           new HumanMessage(
-            "I will provide you with the documents to grade, each document will have a title and the content of the document:",
+            "I will now provide you with the documents to grade, each document will have a title and the content of the document:",
           ),
           ...documents.map(
-            (document) =>
-              new HumanMessage(`
-            # ${document.name}
-            ${document.text}
-            `),
+            ({ name, text }) => new HumanMessage(`# ${name}\n\n${text}`),
           ),
           new HumanMessage(query),
-        ]);
-
-        console.log("result", result);
-
+        ];
+        const result = await llm.current.invoke(chat);
         const json = JSON.parse(result.toString());
-
-        console.log("json", json);
 
         if (typeof json !== "object") return;
 
         const processed = postProcessResponse(json);
-        console.log("result", result, processed);
 
         const data = feedback.parse({
           ...processed,
           metaData: {
-            date: new Date(),
             model: model,
-            prompt: FEEDBACK_TEMPLATE + "\n\n" + query,
+            prompt: chat.map(({ content }) => content).join("\n\n"),
           },
         });
-        setFeedback(competency, indicator.name, data);
+        setFeedback(competency, indicator, data);
       } catch (error) {
         if (error instanceof ZodError) {
           console.log("TODO: fix ollama response error", error.errors);
@@ -156,10 +141,9 @@ export function LlmProvider(props: PropsWithChildren) {
         }
 
         if (!triesLeft) {
-          toast.error(`${competency} - ${indicator.name}`, {
+          toast.error(`${competency} - ${indicator}`, {
             description: "Failed to get feedback",
           });
-
           return;
         }
 
@@ -178,9 +162,7 @@ export function LlmProvider(props: PropsWithChildren) {
         return;
       }
 
-      const model = models.find(({ name }) => name === modelName) ?? null;
-
-      setLocalModel(model);
+      setLocalModel(models.find(({ name }) => name === modelName) ?? null);
     },
     [models],
   );
@@ -193,8 +175,9 @@ export function LlmProvider(props: PropsWithChildren) {
 
     llm.current = new Ollama({
       model: model.name,
-      numCtx: 1000,
       format: "json",
+      temperature: 0.9,
+      // numCtx: 1000,
       // temperature: 0.2,
       // embeddingOnly: true,
       // frequencyPenalty: 1.6,
