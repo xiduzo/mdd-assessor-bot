@@ -27,7 +27,7 @@ const config: ForgeConfig = {
       teamId: process.env.APPLE_TEAM_ID!,
     },
   },
-  buildIdentifier: "mdd-assessment-bot",
+  buildIdentifier: "mdd-assessor-bot",
   rebuildConfig: {},
   makers: [
     new MakerSquirrel({}),
@@ -43,7 +43,7 @@ const config: ForgeConfig = {
       },
     }),
     new MakerDMG({
-      appPath: "out/make/mdd-assessment-bot-darwin-x64/mdd-assessment-bot.app",
+      appPath: "out/make/mdd-assessor-bot-darwin-x64/mdd-assessor-bot.app",
     }),
   ],
   plugins: [

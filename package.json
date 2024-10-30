@@ -1,6 +1,6 @@
 {
-  "name": "mdd-assessment-bot",
-  "productName": "mdd-assessment-bot",
+  "name": "mdd-assessor-bot",
+  "productName": "mdd-assessor-bot",
   "version": "0.1.0",
   "description": "A LLM experiment for providing students with feedback",
   "main": ".vite/build/main.js",
