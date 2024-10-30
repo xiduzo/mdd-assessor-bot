@@ -1,75 +1,4 @@
-import { FEEDBACK_TEMPLATE } from "@/lib/systemTemplates";
-import { competenciesWithIncidactors, DocumentMetaData } from "@/lib/types";
-import { Document } from "@langchain/core/documents";
-import { LanguageModelLike } from "@langchain/core/language_models/base";
-import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { OllamaEmbeddings } from "@langchain/ollama";
-import {
-  MarkdownTextSplitter,
-  RecursiveCharacterTextSplitter,
-} from "@langchain/textsplitters";
-import { createStuffDocumentsChain } from "langchain/chains/combine_documents";
-import { createRetrievalChain } from "langchain/chains/retrieval";
-import { MemoryVectorStore } from "langchain/vectorstores/memory";
-import { type ModelResponse } from "ollama";
-
-// TODO: allow the user to set the embeddings model params
-export const competencySplitter = new MarkdownTextSplitter({
-  chunkSize: 500,
-  chunkOverlap: 20,
-});
-
-export const documentSplitter = new RecursiveCharacterTextSplitter({
-  chunkSize: 300,
-  chunkOverlap: 20,
-});
-
-export async function createVectorStore(
-  model: ModelResponse,
-  initialDocuments: Document[] = [],
-) {
-  const splitDocs = await competencySplitter.createDocuments(
-    INDICATOR_DOCUMENTS.map((competency) => competency.text),
-    INDICATOR_DOCUMENTS.map(
-      (competency): DocumentMetaData => ({
-        name: `${competency.competency} - ${competency.indicator}`,
-        competency: competency.competency,
-        indicator: competency.indicator,
-        lastModified: Date.now(),
-        type: "grading reference",
-      }),
-    ),
-  );
-
-  return MemoryVectorStore.fromDocuments(
-    [...splitDocs, ...initialDocuments],
-    new OllamaEmbeddings({ model: model.name }),
-  );
-}
-
-// TODO: look into https://js.langchain.com/docs/how_to/qa_chat_history_how_to/#tying-it-together
-export async function createRunner(
-  llm: LanguageModelLike,
-  vectorStore: MemoryVectorStore,
-) {
-  const retriever = vectorStore.asRetriever();
-
-  const prompt = ChatPromptTemplate.fromMessages([
-    ["system", FEEDBACK_TEMPLATE],
-    // new MessagesPlaceholder("chat_history"),
-    ["human", "{input}"],
-  ]);
-
-  const questionAnswerChain = await createStuffDocumentsChain({
-    llm,
-    prompt,
-  });
-
-  return createRetrievalChain({
-    retriever,
-    combineDocsChain: questionAnswerChain,
-  });
-}
+import { competenciesWithIncidactors } from "@/lib/types";
 
 export function postProcessResponse(input: Record<string, unknown>) {
   return Object.keys(input).reduce(
@@ -78,9 +7,15 @@ export function postProcessResponse(input: Record<string, unknown>) {
       const lowerKey = key.toLowerCase();
 
       if (
-        ["grade", "grading", "score", "rating", "overall", "result"].includes(
-          lowerKey,
-        )
+        [
+          "grade",
+          "grading",
+          "score",
+          "rating",
+          "overall",
+          "result",
+          "value",
+        ].includes(lowerKey)
       ) {
         switch (typeof value) {
           case "object":
@@ -109,7 +44,7 @@ export function postProcessResponse(input: Record<string, unknown>) {
   );
 }
 
-const INDICATOR_DOCUMENTS = competenciesWithIncidactors.flatMap(
+export const INDICATOR_DOCUMENTS = competenciesWithIncidactors.flatMap(
   (competency) => {
     let competencyText = ``;
     competencyText += `# Competency: ${competency.name} (${competency.abbreviation})`;
@@ -143,8 +78,6 @@ const INDICATOR_DOCUMENTS = competenciesWithIncidactors.flatMap(
         indicatorText += `|`;
         indicatorText += `\n`;
       });
-
-      console.log(indicatorText);
 
       return { indicator, indicatorText };
     });

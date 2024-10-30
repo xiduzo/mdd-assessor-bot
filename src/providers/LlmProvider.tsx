@@ -1,13 +1,8 @@
-import {
-  createRunner,
-  createVectorStore,
-  documentSplitter,
-  postProcessResponse,
-} from "@/lib/llm";
+import { INDICATOR_DOCUMENTS, postProcessResponse } from "@/lib/llm";
 import { FEEDBACK_TEMPLATE } from "@/lib/systemTemplates";
-import { Competency, DocumentMetaData, feedback, Indicator } from "@/lib/types";
-import { Document } from "@langchain/core/documents";
-import { BaseMessage } from "@langchain/core/messages";
+import { Competency, feedback, StudentDocument } from "@/lib/types";
+import { LanguageModelLike } from "@langchain/core/language_models/base";
+import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { Ollama } from "@langchain/ollama";
 import { type ModelResponse } from "ollama";
 import {
@@ -25,20 +20,17 @@ import { useLocalStorage } from "usehooks-ts";
 import { ZodError } from "zod";
 import { useFeedback } from "./FeedbackProvider";
 
-type AddDocumentInput = Omit<DocumentMetaData, "type"> & { text: string };
-
 type LmmContextType = {
-  addStudentDocuments: (input: AddDocumentInput[]) => Promise<void>;
+  addStudentDocuments: (input: StudentDocument[]) => void;
   removeStudentDocuments: (input: Pick<File, "name">[]) => void;
-  documents: Document<DocumentMetaData>[];
+  documents: StudentDocument[];
   models: ModelResponse[];
   model: ModelResponse | null;
-  embeddings: ModelResponse | null;
-  setModel: (modelName: string, modelType: "chat" | "embeddings") => void;
+  setModel: (modelName: string) => void;
   status: "initializing" | "initialized" | "error" | undefined;
   getGrading: (
     competency: Competency,
-    indicator: Pick<Indicator, "name">,
+    indicator: string,
     triesLeft?: number,
   ) => Promise<void>;
 };
@@ -54,7 +46,6 @@ const LlmContext = createContext<LmmContextType>({
   documents: [],
   models: [],
   model: null,
-  embeddings: null,
   setModel: () => {
     throw new Error("setModel not implemented");
   },
@@ -64,113 +55,84 @@ const LlmContext = createContext<LmmContextType>({
 });
 
 export function LlmProvider(props: PropsWithChildren) {
-  const [documents, setDocuments] = useLocalStorage<
-    Document<DocumentMetaData>[]
-  >("documents", []);
+  const [documents, setDocuments] = useLocalStorage<StudentDocument[]>(
+    "documents",
+    [],
+  );
   const [models, setModels] = useState<ModelResponse[]>([]);
   const [status, setStatus] = useState<LmmContextType["status"]>();
   const [model, setLocalModel] = useLocalStorage<ModelResponse | null>(
     "model",
     null,
   );
-  const [embeddings, setLocalEmbedding] = useLocalStorage<ModelResponse | null>(
-    "embeddings",
-    null,
-  );
+  const llm = useRef<LanguageModelLike>();
 
   const { setFeedback } = useFeedback();
 
-  const runnable = useRef<Awaited<ReturnType<typeof createRunner>> | null>(
-    null,
-  );
-  const vectorStore = useRef<Awaited<
-    ReturnType<typeof createVectorStore>
-  > | null>(null);
-
   const removeStudentDocuments = useCallback(
-    async (documents: Pick<File, "name">[]) => {
+    (documents: Pick<File, "name">[]) => {
       const fileNamesToDelete = documents.map(({ name }) => name);
-      // TODO: figure out how to properly remove documents
-      // https://js.langchain.com/docs/integrations/vectorstores/memory/
-      // https://v03.api.js.langchain.com/classes/_langchain_core.stores.InMemoryStore.html#mdelete
-      // seems like https://js.langchain.com/docs/integrations/vectorstores/chroma/#delete-items-from-vector-store
-      if (vectorStore.current) {
-        // This is a hack to remove the vectors from the memory store
-        vectorStore.current.memoryVectors =
-          vectorStore.current.memoryVectors.filter(
-            (vector) => !fileNamesToDelete.includes(vector.metadata.name),
-          );
-      }
       setDocuments((prev) =>
-        prev.filter(
-          (document) => !fileNamesToDelete.includes(document.metadata.name),
-        ),
+        prev.filter(({ name }) => !fileNamesToDelete.includes(name)),
       );
     },
     [],
   );
 
   const addStudentDocuments = useCallback(
-    async (files: AddDocumentInput[]) => {
-      await removeStudentDocuments(files);
-      console.log("files", files);
-      const texts = files.map(({ text }) => text);
-      const meta = files.map(
-        (file): DocumentMetaData => ({
-          name: file.name,
-          lastModified: file.lastModified,
-          type: "student document",
-        }),
-      );
-      const documents = await documentSplitter.createDocuments(texts, meta);
-      await vectorStore.current?.addDocuments(documents);
-      setDocuments((prev) => [
-        ...prev,
-        ...(documents as Document<DocumentMetaData>[]),
-      ]);
+    (files: StudentDocument[]) => {
+      removeStudentDocuments(files);
+      setDocuments((prev) => [...prev, ...files]);
     },
     [removeStudentDocuments],
   );
 
   const getGrading = useCallback(
-    async (
-      competency: Competency,
-      indicator: Pick<Indicator, "name">,
-      triesLeft = 20, // TODO: this mostly fails because the `grade` is not present in the resonse, a better prompt will help
-    ) => {
+    async (competency: Competency, indicator: string, triesLeft = 5) => {
       if (!documents.length) return;
       if (!model) return;
-      if (!embeddings) return;
 
-      while (!runnable.current) {
+      while (!llm.current) {
         await new Promise((resolve) => setTimeout(resolve, 1000));
       }
-      const chatHistory: BaseMessage[] = [];
 
-      chatHistory.push();
+      const query = `what grade ("novice", "competent", "proficient", or "visionary") and feedback would you give the student for given the competency ${competency} and indicator ${indicator}?`;
 
-      const query = `what grade ("novice", "competent", "proficient", or "visionary") and feedback would you give the student for given the competency ${competency} and indicator ${indicator.name}?`;
+      const indicatorText = INDICATOR_DOCUMENTS.find(
+        (text) =>
+          text.indicator === indicator && text.competency === competency,
+      );
+
+      if (!indicatorText) return;
 
       try {
-        const result = await runnable.current.invoke({ input: query });
-        const json = JSON.parse(result.answer);
+        const chat: (SystemMessage | HumanMessage)[] = [
+          new SystemMessage(
+            FEEDBACK_TEMPLATE.replace("{indicator_text}", indicatorText.text),
+          ),
+          new HumanMessage(
+            "I will now provide you with the documents to grade, each document will have a title and the content of the document:",
+          ),
+          ...documents.map(
+            ({ name, text }) => new HumanMessage(`# ${name}\n\n${text}`),
+          ),
+          new HumanMessage(query),
+        ];
+        const result = await llm.current.invoke(chat);
+        const json = JSON.parse(result.toString());
 
         if (typeof json !== "object") return;
 
         const processed = postProcessResponse(json);
-        console.log("result", result, processed);
 
         const data = feedback.parse({
           ...processed,
           metaData: {
-            date: new Date(),
             model: model,
-            embeddingsModel: embeddings,
-            prompt: FEEDBACK_TEMPLATE + "\n\n" + query,
-            context: result.context,
+            prompt: chat.map(({ content }) => content).join("\n\n"),
           },
         });
-        setFeedback(competency, indicator.name, data);
+        setFeedback(competency, indicator, data);
       } catch (error) {
         if (error instanceof ZodError) {
           console.log("TODO: fix ollama response error", error.errors);
@@ -179,21 +141,20 @@ export function LlmProvider(props: PropsWithChildren) {
         }
 
         if (!triesLeft) {
-          toast.error(`${competency} - ${indicator.name}`, {
+          toast.error(`${competency} - ${indicator}`, {
             description: "Failed to get feedback",
           });
-
           return;
         }
 
         await getGrading(competency, indicator, triesLeft - 1);
       }
     },
-    [setFeedback, documents, model, embeddings],
+    [setFeedback, documents, model],
   );
 
   const setModel = useCallback(
-    async (modelName: string, modelType: "chat" | "embeddings") => {
+    async (modelName: string) => {
       if (!models.length) {
         toast.warning(`Unable to set model ${modelName}`, {
           description: "Please wait for the models to load",
@@ -201,16 +162,7 @@ export function LlmProvider(props: PropsWithChildren) {
         return;
       }
 
-      const model = models.find(({ name }) => name === modelName) ?? null;
-
-      switch (modelType) {
-        case "chat":
-          setLocalModel(model);
-          break;
-        case "embeddings":
-          setLocalEmbedding(model);
-          break;
-      }
+      setLocalModel(models.find(({ name }) => name === modelName) ?? null);
     },
     [models],
   );
@@ -220,13 +172,12 @@ export function LlmProvider(props: PropsWithChildren) {
     setStatus("initializing");
 
     if (!model) return;
-    if (!embeddings) return;
 
-    console.log(model);
-    const llm = new Ollama({
+    llm.current = new Ollama({
       model: model.name,
-      numCtx: 1000,
       format: "json",
+      temperature: 0.9,
+      // numCtx: 1000,
       // temperature: 0.2,
       // embeddingOnly: true,
       // frequencyPenalty: 1.6,
@@ -236,16 +187,8 @@ export function LlmProvider(props: PropsWithChildren) {
       // topP: 0.5,
     });
 
-    const store = await createVectorStore(embeddings, documents);
-    vectorStore.current = store;
-    console.log("store", store);
-
-    const runner = await createRunner(llm, store);
-    console.log("runner", runner);
-
-    runnable.current = runner;
     setStatus("initialized");
-  }, [models, model, embeddings, documents]);
+  }, [models, model, documents]);
 
   useEffect(() => {
     window.electron.ipcRenderer.send("get-models");
@@ -264,7 +207,6 @@ export function LlmProvider(props: PropsWithChildren) {
         models,
         model,
         setModel,
-        embeddings,
         status,
         getGrading,
       }}
