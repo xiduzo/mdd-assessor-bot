@@ -181,7 +181,6 @@ Find more information on the [HvA website](https://www.hva.nl/bibliotheek/onders
 ========================
 # References
 Ollama. (${new Date().getFullYear()}). ${props.indicator.feedback?.metaData.model.name} (${format(props.indicator.feedback?.metaData.model.modified_at ?? new Date(), "MMM dd")} version)[Large Language Model]. Accessed on ${format(new Date(), "do MMM yyyy")}
-Ollama. (${new Date().getFullYear()}). ${props.indicator.feedback?.metaData.embeddingsModel.name} (${format(props.indicator.feedback?.metaData.embeddingsModel.modified_at ?? new Date(), "MMM dd")} version)[Large Language Model]. Accessed on ${format(new Date(), "do MMM yyyy")}
 
 ------------------------
 Generated using the following prompt
@@ -210,12 +209,17 @@ ${props.indicator.feedback?.metaData.prompt}
                 h2: ({ children }) => (
                   <h2 className="font-semibold mt-4 text-lg">{children}</h2>
                 ),
-                p: ({ children }) => <p className="mb-0.5">{children}</p>,
+                p: ({ children }) => <p className="mb-4">{children}</p>,
                 ul: ({ children }) => (
-                  <ul className="list-disc list-inside mb-2">{children}</ul>
+                  <ul className="list-disc list-inside mb-4 [&>*]:inline">
+                    {children}
+                  </ul>
                 ),
                 ol: ({ children }) => (
-                  <ol className="list-decimal list-inside mb-2">{children}</ol>
+                  <ol className="list-decimal list-inside mb-4">{children}</ol>
+                ),
+                li: ({ children }) => (
+                  <li className="mb-2 [&>*]:inline">{children}</li>
                 ),
               }}
             >

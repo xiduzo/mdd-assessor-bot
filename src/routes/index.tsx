@@ -13,11 +13,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuPortal,
   DropdownMenuShortcut,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import NumberTicker from "@/components/ui/number-ticker";
@@ -27,14 +23,12 @@ import { cva } from "class-variance-authority";
 import { format } from "date-fns";
 import {
   ArrowLeft,
-  Bot,
   BotMessageSquare,
   BotOff,
-  FileDigit,
   Folder,
   FolderOpen,
 } from "lucide-react";
-import { PropsWithChildren, useEffect, useMemo, useState } from "react";
+import { PropsWithChildren, useEffect, useState } from "react";
 import {
   createBrowserRouter,
   MemoryRouter,
@@ -97,7 +91,7 @@ function Layout(props: PropsWithChildren) {
 }
 
 function LlmAgent() {
-  const { models, model, setModel, embeddings, status } = useLlm();
+  const { models, model, setModel, status } = useLlm();
 
   return (
     <DropdownMenu>
@@ -110,65 +104,21 @@ function LlmAgent() {
           {!status && <BotOff />}
           {status === "error" && <BotOff />}
           {status === "initializing" && <BotOff />}
-          {status === "initialized" && <Bot />}
+          {status === "initialized" && <BotMessageSquare />}
           {model?.name ?? "No LLM selected"}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-52" align="end">
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger
-            className={llmOptionModel({ modelSelected: !!model })}
+        {models.map(({ name }) => (
+          <DropdownMenuCheckboxItem
+            key={name}
+            checked={name === model?.name}
+            disabled={name === model?.name}
+            onClick={() => setModel(name)}
           >
-            <BotMessageSquare size={16} className="mr-2" />
-            <section className="flex flex-col">
-              <span>Feedback model</span>
-              <span className="text-xs text-muted-foreground">
-                {model?.name}
-              </span>
-            </section>
-          </DropdownMenuSubTrigger>
-          <DropdownMenuPortal>
-            <DropdownMenuSubContent>
-              {models.map(({ name }) => (
-                <DropdownMenuCheckboxItem
-                  key={name}
-                  checked={name === model?.name}
-                  disabled={name === model?.name}
-                  onClick={() => setModel(name, "chat")}
-                >
-                  {name}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuSubContent>
-          </DropdownMenuPortal>
-        </DropdownMenuSub>
-        <DropdownMenuSub>
-          <DropdownMenuSubTrigger
-            className={llmOptionModel({ modelSelected: !!embeddings })}
-          >
-            <FileDigit size={16} className="mr-2" />
-            <section className="flex flex-col">
-              <span>Embeddings model</span>
-              <span className="text-xs text-muted-foreground">
-                {embeddings?.name}
-              </span>
-            </section>
-          </DropdownMenuSubTrigger>
-          <DropdownMenuPortal>
-            <DropdownMenuSubContent>
-              {models.map(({ name }) => (
-                <DropdownMenuCheckboxItem
-                  key={name}
-                  checked={name === embeddings?.name}
-                  disabled={name === embeddings?.name}
-                  onClick={() => setModel(name, "embeddings")}
-                >
-                  {name}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuSubContent>
-          </DropdownMenuPortal>
-        </DropdownMenuSub>
+            {name}
+          </DropdownMenuCheckboxItem>
+        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -184,15 +134,6 @@ const llmAgentButton = cva("", {
   },
 });
 
-const llmOptionModel = cva("", {
-  variants: {
-    modelSelected: {
-      true: "",
-      false: "text-red-500",
-    },
-  },
-});
-
 type ReconstructedDocument = Pick<File, "name" | "lastModified"> & {
   text: string;
 };
@@ -200,28 +141,6 @@ function MyDocuments() {
   const { documents, removeStudentDocuments } = useLlm();
   const [openDocument, setOpenDocument] = useState<ReconstructedDocument>();
   const [isOpen, setIsOpen] = useState(false);
-
-  const myDocuments = useMemo(() => {
-    const uniqueDocuments: Map<string, ReconstructedDocument> = new Map();
-
-    documents.forEach((doc) => {
-      const content = uniqueDocuments.get(doc.metadata.name);
-      if (content) {
-        uniqueDocuments.set(doc.metadata.name, {
-          ...content,
-          text: content.text + " " + doc.pageContent,
-        });
-        return;
-      }
-
-      uniqueDocuments.set(doc.metadata.name, {
-        ...doc.metadata,
-        text: doc.pageContent,
-      });
-    });
-
-    return Array.from(uniqueDocuments.values());
-  }, [documents]);
 
   useEffect(() => {
     function listener(event: KeyboardEvent) {
@@ -239,7 +158,7 @@ function MyDocuments() {
         case "9":
           setOpenDocument((prev) => {
             if (prev) return prev;
-            return myDocuments.at(Number(event.key) - 1);
+            return documents.at(Number(event.key) - 1);
           });
           break;
         default:
@@ -251,7 +170,7 @@ function MyDocuments() {
     return () => {
       window.removeEventListener("keydown", listener);
     };
-  }, [myDocuments]);
+  }, [documents]);
 
   return (
     <>
@@ -261,7 +180,7 @@ function MyDocuments() {
             variant="ghost"
             size="icon"
             className="relative"
-            aria-label={`View your uploaded documents (${myDocuments.length} documents)`}
+            aria-label={`View your uploaded documents (${documents.length} documents)`}
           >
             {isOpen ? <FolderOpen /> : <Folder />}
             <Badge
@@ -271,19 +190,19 @@ function MyDocuments() {
               aria-hidden
             >
               <NumberTicker
-                value={myDocuments.length}
+                value={documents.length}
                 className="text-white w-full"
               />
             </Badge>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          {!myDocuments.length && (
+          {!documents.length && (
             <DropdownMenuItem disabled>
               Mucho empty, your uploaded documents will appear here
             </DropdownMenuItem>
           )}
-          {myDocuments.map((doc, index) => (
+          {documents.map((doc, index) => (
             <DropdownMenuItem
               key={doc.name}
               onClick={() => setOpenDocument(doc)}

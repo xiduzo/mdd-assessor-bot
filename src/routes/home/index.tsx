@@ -245,6 +245,7 @@ function FileUploader(props: { file: File; removeFile: (file: File) => void }) {
             text: response.data ?? "",
           },
         ]);
+        await new Promise((resolve) => setTimeout(resolve, 3000));
         props.removeFile(props.file);
       },
     );
