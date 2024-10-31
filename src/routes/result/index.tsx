@@ -76,8 +76,13 @@ export function ResultRoute() {
               </Tooltip>
             </TooltipProvider>
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="space-x-2">
             <em>/ˈfiːd.bæk/</em>
+            <span>
+              information given to guide future behavior, improve performance,
+              or enhance understanding, provided by various sources like
+              teachers, peers, or experiences.
+            </span>
           </CardDescription>
         </CardHeader>
         <CardContent className="grid lg:grid-cols-2 grid-cols-1 lg:gap-10 gap-8">
