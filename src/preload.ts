@@ -2,6 +2,7 @@
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
 
 import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
+import { IpcResponse } from "./lib/types";
 
 type Channels = string;
 
@@ -10,17 +11,24 @@ export const electronHandler = {
     send(channel: Channels, ...args: unknown[]) {
       ipcRenderer.send(channel, ...args);
     },
-    on<T>(channel: Channels, func: (response: T) => void): () => void {
-      const subscription = (_event: IpcRendererEvent, response: T) =>
-        func(response);
-      ipcRenderer.on(channel, subscription);
+    on<Data>(
+      channel: Channels,
+      callback: (response: IpcResponse<Data>) => void,
+    ): () => void {
+      const listner = (_event: IpcRendererEvent, response: IpcResponse<Data>) =>
+        callback(response);
+
+      ipcRenderer.on(channel, listner);
 
       return () => {
-        ipcRenderer.removeListener(channel, subscription);
+        ipcRenderer.removeListener(channel, listner);
       };
     },
-    once<T>(channel: Channels, func: (...args: T[]) => void) {
-      ipcRenderer.once(channel, (_event, ...args) => func(...args));
+    once<Data>(
+      channel: Channels,
+      callback: (response: IpcResponse<Data>) => void,
+    ) {
+      ipcRenderer.once(channel, (_event, args) => callback(args));
     },
   },
 };

@@ -1,6 +1,10 @@
 import { ModelResponse } from "ollama";
 import { z } from "zod";
 
+export type IpcResponse<T> =
+  | { success: true; data: T }
+  | { success: false; error: string };
+
 export const grades = [
   "novice",
   "competent",

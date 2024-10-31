@@ -16,7 +16,7 @@ import {
   File,
   FileDigit,
   FilePlus,
-  FileQuestion,
+  FileX2,
   Sparkles,
   Trash,
 } from "lucide-react";
@@ -203,24 +203,18 @@ function FileUploader(props: { file: File; removeFile: (file: File) => void }) {
     };
     reader.readAsArrayBuffer(props.file);
 
-    window.electron.ipcRenderer.on(
+    return window.electron.ipcRenderer.on<{ text: string; fileName: string }>(
       "upload-file-response",
-      async (response: {
-        success: boolean;
-        data?: string;
-        error?: string;
-        fileName: string;
-      }) => {
-        if (props.file.name !== response.fileName) return;
-
-        if (!response.success || response.error) {
+      async (response) => {
+        if (!response.success) {
           toast.warning(props.file.name, {
-            description:
-              response.error ?? "An error occurred while processing the file",
+            description: response.error,
           });
           setUploadState("error");
           return;
         }
+
+        if (props.file.name !== response.data.fileName) return;
 
         if (!response.data) {
           toast.warning(props.file.name, {
@@ -242,7 +236,7 @@ function FileUploader(props: { file: File; removeFile: (file: File) => void }) {
           {
             name: props.file.name,
             lastModified: props.file.lastModified,
-            text: response.data ?? "",
+            text: response.data.text,
           },
         ]);
         await new Promise((resolve) => setTimeout(resolve, 3000));
@@ -264,7 +258,7 @@ function FileUploader(props: { file: File; removeFile: (file: File) => void }) {
             <FileDigit size={20} className="text-green-900 z-10" />
           )}
           {uploadState === "error" && (
-            <FileQuestion className="text-red-500 z-10" size={20} />
+            <FileX2 className="text-red-500 z-10" size={20} />
           )}
         </section>
         <section className="grow">
@@ -316,7 +310,7 @@ const fileIconBackground = cva(
     variants: {
       uploadState: {
         uploading: "bg-foreground/10 animate-pulse",
-        error: "bg-red-500",
+        error: "bg-red-500/10",
         success: "bg-green-400/10",
       },
     },

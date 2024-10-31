@@ -193,9 +193,23 @@ export function LlmProvider(props: PropsWithChildren) {
   useEffect(() => {
     window.electron.ipcRenderer.send("get-models");
 
-    window.electron.ipcRenderer.on<ModelResponse[]>("models", (event) => {
-      setModels(event);
-    });
+    return window.electron.ipcRenderer.on<ModelResponse[]>(
+      "models",
+      (event) => {
+        if (!event.success) {
+          toast.warning(event.error, {
+            description: "Is Ollama running?",
+            action: {
+              label: "Install Ollama",
+              onClick: () => window.open("https://ollama.com/"),
+            },
+          });
+          return;
+        }
+
+        setModels(event.data);
+      },
+    );
   }, []);
 
   return (

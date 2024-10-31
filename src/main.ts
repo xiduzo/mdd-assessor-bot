@@ -1,6 +1,7 @@
+import { IpcResponse } from "@/lib/types";
 import { app, BrowserWindow, ipcMain } from "electron";
 import Squirrel from "electron-squirrel-startup";
-import ollama from "ollama";
+import ollama, { ModelResponse } from "ollama";
 import path from "path";
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
@@ -39,7 +40,7 @@ const createWindow = () => {
   }
 
   // Open the DevTools.
-  mainWindow.webContents.openDevTools();
+  //mainWindow.webContents.openDevTools();
 };
 
 // This method will be called when Electron has finished
@@ -64,37 +65,61 @@ app.on("activate", () => {
   }
 });
 
+type PdfParseResponse = IpcResponse<{ text: string; fileName: string }>;
 ipcMain.on("pdf-parse", (event, fileData, fileName) => {
   const buffer = Buffer.from(fileData);
 
-  let data = "";
+  let text = "";
   new PdfReader().parseBuffer(buffer, (error, item) => {
     if (error) {
-      event.reply("upload-file-response", {
+      const response: PdfParseResponse = {
         success: false,
         error: error,
-        fileName,
-      });
+      };
+
+      event.reply("upload-file-response", response);
       return;
     }
 
     if (!item) {
-      event.reply("upload-file-response", { success: true, data, fileName });
+      if (text === "") {
+        const response: PdfParseResponse = {
+          success: false,
+          error: "File does not contain any text",
+        };
+        event.reply("upload-file-response", response);
+        return;
+      }
+
+      const response: PdfParseResponse = {
+        success: true,
+        data: { text, fileName },
+      };
+      event.reply("upload-file-response", response);
       return;
     }
 
     if (item.text) {
-      data += item.text;
+      text += item.text;
       return;
     }
   });
 });
 
+type GetModelsResponse = IpcResponse<ModelResponse[]>;
 ipcMain.on("get-models", async (event) => {
   try {
-    const models = await ollama.list();
-    event.reply("models", models.models);
+    const { models } = await ollama.list();
+    const response: GetModelsResponse = {
+      success: true,
+      data: models,
+    };
+    event.reply("models", response);
   } catch {
-    event.reply("models", []);
+    const response: GetModelsResponse = {
+      success: false,
+      error: "Unable to fetch models",
+    };
+    event.reply("models", response);
   }
 });
