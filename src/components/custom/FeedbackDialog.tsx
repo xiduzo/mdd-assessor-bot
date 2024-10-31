@@ -57,22 +57,40 @@ export function FeedbackDialog(props: {
       return [undefined, undefined];
     }
 
-    const previousIndicator =
+    const previousIndicatorWithinCompetency =
       competenciesWithIncidactors[currentCompetencyIndex].indicators[
         currentIndicatorIndex - 1
-      ] ??
-      competenciesWithIncidactors[currentCompetencyIndex - 1]?.indicators[0] ??
+      ];
+    const previousIndicatorFromPreviousCompetency =
+      competenciesWithIncidactors[currentCompetencyIndex - 1]?.indicators[
+        competenciesWithIncidactors[currentCompetencyIndex - 1].indicators
+          .length - 1
+      ];
+    const lastIndicatorOfLastCompetency =
       competenciesWithIncidactors[competenciesWithIncidactors.length - 1]
         ?.indicators[
         competenciesWithIncidactors[competenciesWithIncidactors.length - 1]
           .indicators.length - 1
       ];
-    const nextIndicator =
+
+    const previousIndicator =
+      previousIndicatorWithinCompetency ??
+      previousIndicatorFromPreviousCompetency ??
+      lastIndicatorOfLastCompetency;
+
+    const nextIndicatorOfCurrentCompetency =
       competenciesWithIncidactors[currentCompetencyIndex].indicators[
         currentIndicatorIndex + 1
-      ] ??
-      competenciesWithIncidactors[currentCompetencyIndex + 1]?.indicators[0] ??
+      ];
+    const firstIndicatorOfNextCompetency =
+      competenciesWithIncidactors[currentCompetencyIndex + 1]?.indicators[0];
+    const firstIndicatorOfFirstCompetency =
       competenciesWithIncidactors[0]?.indicators[0];
+
+    const nextIndicator =
+      nextIndicatorOfCurrentCompetency ??
+      firstIndicatorOfNextCompetency ??
+      firstIndicatorOfFirstCompetency;
 
     return [previousIndicator, nextIndicator];
   }, [competenciesWithIncidactors, props.competency, props.indicator]);
