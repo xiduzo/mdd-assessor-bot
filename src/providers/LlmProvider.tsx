@@ -16,8 +16,7 @@ import {
   useState,
 } from "react";
 import { toast } from "sonner";
-import { useLocalStorage } from "usehooks-ts";
-import { ZodError } from "zod";
+import { useInterval, useLocalStorage } from "usehooks-ts";
 import { useFeedback } from "./FeedbackProvider";
 
 type LmmContextType = {
@@ -55,22 +54,70 @@ const LlmContext = createContext<LmmContextType>({
 });
 
 export function LlmProvider(props: PropsWithChildren) {
+  const { setFeedback } = useFeedback();
   const [documents, setDocuments] = useLocalStorage<StudentDocument[]>(
     "documents",
     [],
   );
-  const [models, setModels] = useState<ModelResponse[]>([]);
-  const [status, setStatus] = useState<LmmContextType["status"]>();
   const [model, setLocalModel] = useLocalStorage<ModelResponse | null>(
     "model",
     null,
   );
+
+  const [models, setModels] = useState<ModelResponse[]>([]);
+  const [status, setStatus] = useState<LmmContextType["status"]>();
+
   const llm = useRef<LanguageModelLike>();
 
-  const { setFeedback } = useFeedback();
+  const queue = useRef<
+    Map<
+      string,
+      { chat: (SystemMessage | HumanMessage)[]; competency: Competency }
+    >
+  >(new Map());
+
+  const processing = useRef<string>();
+
+  useInterval(async () => {
+    if (!llm.current) return;
+    if (!queue.current.size) return;
+    if (processing.current) return;
+
+    const item = Array.from(queue.current.entries())
+      .sort(() => Math.random() - Math.random())
+      .at(0);
+
+    if (!item) return;
+
+    const [indicator, { chat, competency }] = item;
+    processing.current = indicator;
+
+    try {
+      const result = await llm.current.invoke(chat);
+      const json = JSON.parse(result.toString());
+
+      if (typeof json !== "object") return;
+
+      const processed = postProcessResponse(json);
+
+      const data = feedback.parse({
+        ...processed,
+        metaData: {
+          model: model,
+          prompt: chat.map(({ content }) => content).join("\n\n"),
+        },
+      });
+      setFeedback(competency, indicator, data);
+      queue.current.delete(indicator);
+    } catch (error) {
+      console.log("Error processing queue", error);
+    } finally {
+      processing.current = undefined;
+    }
+  }, 1000);
 
   const removeStudentDocuments = useCallback(
-    (documents: Pick<File, "name">[]) => {
+    (documents: Pick<StudentDocument, "name">[]) => {
       const fileNamesToDelete = documents.map(({ name }) => name);
       setDocuments((prev) =>
         prev.filter(({ name }) => !fileNamesToDelete.includes(name)),
@@ -80,23 +127,16 @@ export function LlmProvider(props: PropsWithChildren) {
   );
 
   const addStudentDocuments = useCallback(
-    (files: StudentDocument[]) => {
-      removeStudentDocuments(files);
-      setDocuments((prev) => [...prev, ...files]);
+    (documents: StudentDocument[]) => {
+      removeStudentDocuments(documents);
+      setDocuments((prev) => [...prev, ...documents]);
     },
     [removeStudentDocuments],
   );
 
   const getGrading = useCallback(
-    async (competency: Competency, indicator: string, triesLeft = 5) => {
+    async (competency: Competency, indicator: string) => {
       if (!documents.length) return;
-      if (!model) return;
-
-      while (!llm.current) {
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-      }
-
-      const query = `what grade ("novice", "competent", "proficient", or "visionary") and feedback would you give the student for given the competency ${competency} and indicator ${indicator}?`;
 
       const indicatorText = INDICATOR_DOCUMENTS.find(
         (text) =>
@@ -105,52 +145,23 @@ export function LlmProvider(props: PropsWithChildren) {
 
       if (!indicatorText) return;
 
-      try {
-        const chat: (SystemMessage | HumanMessage)[] = [
-          new SystemMessage(
-            FEEDBACK_TEMPLATE.replace("{indicator_text}", indicatorText.text),
-          ),
-          new HumanMessage(
-            "I will now provide you with the documents to grade, each document will have a title and the content of the document:",
-          ),
-          ...documents.map(
-            ({ name, text }) => new HumanMessage(`# ${name}\n\n${text}`),
-          ),
-          new HumanMessage(query),
-        ];
-        const result = await llm.current.invoke(chat);
-        const json = JSON.parse(result.toString());
-
-        if (typeof json !== "object") return;
-
-        const processed = postProcessResponse(json);
-
-        const data = feedback.parse({
-          ...processed,
-          metaData: {
-            model: model,
-            prompt: chat.map(({ content }) => content).join("\n\n"),
-          },
-        });
-        setFeedback(competency, indicator, data);
-      } catch (error) {
-        if (error instanceof ZodError) {
-          console.log("TODO: fix ollama response error", error.errors);
-        } else {
-          console.log("TODO: fix ollama error", error);
-        }
-
-        if (!triesLeft) {
-          toast.error(`${competency} - ${indicator}`, {
-            description: "Failed to get feedback",
-          });
-          return;
-        }
-
-        await getGrading(competency, indicator, triesLeft - 1);
-      }
+      const chat: (SystemMessage | HumanMessage)[] = [
+        new SystemMessage(
+          FEEDBACK_TEMPLATE.replace("{indicator_text}", indicatorText.text),
+        ),
+        new HumanMessage(
+          "I will now provide you with the documents to grade, each document will have a title and the content of the document:",
+        ),
+        ...documents.map(
+          ({ name, text }) => new HumanMessage(`# ${name}\n\n${text}`),
+        ),
+        new HumanMessage(
+          `what grade ("novice", "competent", "proficient", or "visionary") and feedback would you give the student for given the competency ${competency} and indicator ${indicator}?`,
+        ),
+      ];
+      queue.current.set(indicator, { chat, competency });
     },
-    [setFeedback, documents, model],
+    [documents, model],
   );
 
   const setModel = useCallback(
