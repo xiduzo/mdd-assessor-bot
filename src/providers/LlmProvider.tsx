@@ -26,11 +26,15 @@ import { useInterval } from "usehooks-ts";
 
 type LmmContextType = {
   getGrading: (indicator: Indicator) => Promise<void>;
+  clear: () => Promise<void>;
 };
 
 const LlmContext = createContext<LmmContextType>({
   getGrading: async () => {
     throw new Error("getGradingTemplate not implemented");
+  },
+  clear: async () => {
+    throw new Error("clear not implemented");
   },
 });
 
@@ -143,6 +147,10 @@ export function LlmProvider(props: PropsWithChildren) {
     [documents, model],
   );
 
+  const clear = useCallback(async () => {
+    queue.current.clear();
+  }, []);
+
   useEffect(() => {
     window.electron.ipcRenderer.send(IPC_CHANNEL.GET_MODELS);
 
@@ -166,7 +174,7 @@ export function LlmProvider(props: PropsWithChildren) {
   }, []);
 
   return (
-    <LlmContext.Provider value={{ getGrading }}>
+    <LlmContext.Provider value={{ getGrading, clear }}>
       {props.children}
     </LlmContext.Provider>
   );
