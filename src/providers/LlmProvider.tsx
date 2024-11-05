@@ -1,85 +1,54 @@
 import { INDICATOR_DOCUMENTS, postProcessResponse } from "@/lib/llm";
 import { FEEDBACK_TEMPLATE } from "@/lib/systemTemplates";
-import { Competency, feedback, StudentDocument } from "@/lib/types";
-import { LanguageModelLike } from "@langchain/core/language_models/base";
+import {
+  competenciesWithIncidactors,
+  feedback,
+  FeedbackMetaData,
+  Indicator,
+  IpcGetModelsResponse,
+  IPC_CHANNEL,
+} from "@/lib/types";
+import { useDocumentStore } from "@/stores/documentStore";
+import { useFeedbackStore } from "@/stores/feedbackStore";
+import { useLlmStore } from "@/stores/llmStore";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { Ollama } from "@langchain/ollama";
-import { type ModelResponse } from "ollama";
 import {
   createContext,
   PropsWithChildren,
   useCallback,
   useContext,
   useEffect,
-  useMemo,
   useRef,
-  useState,
 } from "react";
 import { toast } from "sonner";
-import { useInterval, useLocalStorage } from "usehooks-ts";
-import { useFeedback } from "./FeedbackProvider";
+import { useInterval } from "usehooks-ts";
 
 type LmmContextType = {
-  addStudentDocuments: (input: StudentDocument[]) => void;
-  removeStudentDocuments: (input: Pick<File, "name">[]) => void;
-  documents: StudentDocument[];
-  models: ModelResponse[];
-  model: ModelResponse | null;
-  setModel: (modelName: string) => void;
-  status: "initializing" | "initialized" | "error" | undefined;
-  getGrading: (
-    competency: Competency,
-    indicator: string,
-    triesLeft?: number,
-  ) => Promise<void>;
+  getGrading: (indicator: Indicator) => Promise<void>;
 };
 
 const LlmContext = createContext<LmmContextType>({
-  addStudentDocuments: async () => {
-    throw new Error("addStudentDocument not implemented");
-  },
-  removeStudentDocuments: async () => {
-    throw new Error("removeStudentDocument not implemented");
-  },
-  status: "initializing",
-  documents: [],
-  models: [],
-  model: null,
-  setModel: () => {
-    throw new Error("setModel not implemented");
-  },
   getGrading: async () => {
     throw new Error("getGradingTemplate not implemented");
   },
 });
 
 export function LlmProvider(props: PropsWithChildren) {
-  const { setFeedback } = useFeedback();
-  const [documents, setDocuments] = useLocalStorage<StudentDocument[]>(
-    "documents",
-    [],
+  const { documents } = useDocumentStore();
+  const { model, set } = useLlmStore();
+  const { add } = useFeedbackStore();
+
+  const queue = useRef<Map<string, { chat: (SystemMessage | HumanMessage)[] }>>(
+    new Map(),
   );
-  const [model, setLocalModel] = useLocalStorage<ModelResponse | null>(
-    "model",
-    null,
-  );
-
-  const [models, setModels] = useState<ModelResponse[]>([]);
-  const [status, setStatus] = useState<LmmContextType["status"]>();
-
-  const llm = useRef<LanguageModelLike>();
-
-  const queue = useRef<
-    Map<
-      string,
-      { chat: (SystemMessage | HumanMessage)[]; competency: Competency }
-    >
-  >(new Map());
 
   const processing = useRef<string>();
 
+  // TODO: move this whole queue and processing to the main thread
+  // potentially calling as child processes via https://www.electronjs.org/docs/latest/api/utility-process
   useInterval(async () => {
-    if (!llm.current) return;
+    if (!model) return;
     if (!queue.current.size) return;
     if (processing.current) return;
 
@@ -87,27 +56,50 @@ export function LlmProvider(props: PropsWithChildren) {
       .sort(() => Math.random() - Math.random())
       .at(0);
 
+    console.log(item);
+
     if (!item) return;
 
-    const [indicator, { chat, competency }] = item;
+    const competency = competenciesWithIncidactors.find(({ indicators }) =>
+      indicators.some(({ name }) => name === item[0]),
+    )?.name;
+
+    if (!competency) return;
+
+    const [indicator, { chat }] = item;
     processing.current = indicator;
 
     try {
-      const result = await llm.current.invoke(chat);
+      const llm = new Ollama({
+        model: model.name,
+        format: "json",
+        temperature: 0.9,
+        // numCtx: 1000,
+        // temperature: 0.2,
+        // embeddingOnly: true,
+        // frequencyPenalty: 1.6,
+        // repeatPenalty: 1.8,
+        // mirostatTau: 3,
+        // topK: 10,
+        // topP: 0.5,
+      });
+
+      const result = await llm.invoke(chat);
       const json = JSON.parse(result.toString());
 
       if (typeof json !== "object") return;
 
       const processed = postProcessResponse(json);
 
-      const data = feedback.parse({
-        ...processed,
-        metaData: {
-          model: model,
-          prompt: chat.map(({ content }) => content).join("\n\n"),
-        },
-      });
-      setFeedback(competency, indicator, data);
+      const metaData: Omit<FeedbackMetaData, "date"> = {
+        model: model,
+        prompt: chat.map(({ content }) => content).join("\n\n"),
+        competency,
+        indicator,
+      };
+
+      const data = feedback.parse({ ...processed, metaData });
+      add(data);
       queue.current.delete(indicator);
     } catch (error) {
       console.log("Error processing queue", error);
@@ -116,34 +108,21 @@ export function LlmProvider(props: PropsWithChildren) {
     }
   }, 1000);
 
-  const removeStudentDocuments = useCallback(
-    (documents: Pick<StudentDocument, "name">[]) => {
-      const fileNamesToDelete = documents.map(({ name }) => name);
-      setDocuments((prev) =>
-        prev.filter(({ name }) => !fileNamesToDelete.includes(name)),
-      );
-    },
-    [],
-  );
-
-  const addStudentDocuments = useCallback(
-    (documents: StudentDocument[]) => {
-      removeStudentDocuments(documents);
-      setDocuments((prev) => [...prev, ...documents]);
-    },
-    [removeStudentDocuments],
-  );
-
   const getGrading = useCallback(
-    async (competency: Competency, indicator: string) => {
+    async (indicator: Indicator) => {
       if (!documents.length) return;
 
       const indicatorText = INDICATOR_DOCUMENTS.find(
-        (text) =>
-          text.indicator === indicator && text.competency === competency,
+        (document) => document.indicator === indicator.name,
       );
 
       if (!indicatorText) return;
+
+      const competency = competenciesWithIncidactors.find(({ indicators }) =>
+        indicators.some(({ name }) => name === indicator.name),
+      )?.name;
+
+      if (!competency) return;
 
       const chat: (SystemMessage | HumanMessage)[] = [
         new SystemMessage(
@@ -156,56 +135,19 @@ export function LlmProvider(props: PropsWithChildren) {
           ({ name, text }) => new HumanMessage(`# ${name}\n\n${text}`),
         ),
         new HumanMessage(
-          `what grade ("novice", "competent", "proficient", or "visionary") and feedback would you give the student for given the competency ${competency} and indicator ${indicator}?`,
+          `what grade ("novice", "competent", "proficient", or "visionary") and feedback would you give the student for given the competency ${competency} and indicator ${indicator.name}?`,
         ),
       ];
-      queue.current.set(indicator, { chat, competency });
+      queue.current.set(indicator.name, { chat });
     },
     [documents, model],
   );
 
-  const setModel = useCallback(
-    async (modelName: string) => {
-      if (!models.length) {
-        toast.warning(`Unable to set model ${modelName}`, {
-          description: "Please wait for the models to load",
-        });
-        return;
-      }
-
-      setLocalModel(models.find(({ name }) => name === modelName) ?? null);
-    },
-    [models],
-  );
-
-  useMemo(async () => {
-    if (!models.length) return;
-    setStatus("initializing");
-
-    if (!model) return;
-
-    llm.current = new Ollama({
-      model: model.name,
-      format: "json",
-      temperature: 0.9,
-      // numCtx: 1000,
-      // temperature: 0.2,
-      // embeddingOnly: true,
-      // frequencyPenalty: 1.6,
-      // repeatPenalty: 1.8,
-      // mirostatTau: 3,
-      // topK: 10,
-      // topP: 0.5,
-    });
-
-    setStatus("initialized");
-  }, [models, model, documents]);
-
   useEffect(() => {
-    window.electron.ipcRenderer.send("get-models");
+    window.electron.ipcRenderer.send(IPC_CHANNEL.GET_MODELS);
 
-    return window.electron.ipcRenderer.on<ModelResponse[]>(
-      "models",
+    return window.electron.ipcRenderer.on<IpcGetModelsResponse>(
+      IPC_CHANNEL.GET_MODELS,
       (event) => {
         if (!event.success) {
           toast.warning(event.error, {
@@ -218,24 +160,13 @@ export function LlmProvider(props: PropsWithChildren) {
           return;
         }
 
-        setModels(event.data);
+        set(event.data);
       },
     );
   }, []);
 
   return (
-    <LlmContext.Provider
-      value={{
-        addStudentDocuments,
-        removeStudentDocuments,
-        documents,
-        models,
-        model,
-        setModel,
-        status,
-        getGrading,
-      }}
-    >
+    <LlmContext.Provider value={{ getGrading }}>
       {props.children}
     </LlmContext.Provider>
   );

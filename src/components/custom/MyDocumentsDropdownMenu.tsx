@@ -19,7 +19,7 @@ import NumberTicker from "@/components/ui/number-ticker";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useIsMac } from "@/hooks/use-is-mac";
 import { StudentDocument } from "@/lib/types";
-import { useLlm } from "@/providers/LlmProvider";
+import { useDocumentStore } from "@/stores/documentStore";
 import { cva } from "class-variance-authority";
 import { format } from "date-fns";
 import { Folder, FolderOpen } from "lucide-react";
@@ -27,7 +27,7 @@ import { useEffect, useState } from "react";
 
 export function MyDocumentsDropdownMenu() {
   const isMac = useIsMac();
-  const { documents, removeStudentDocuments } = useLlm();
+  const { documents, remove } = useDocumentStore();
   const [openDocument, setOpenDocument] = useState<StudentDocument>();
   const [isOpen, setIsOpen] = useState(false);
 
@@ -139,7 +139,7 @@ export function MyDocumentsDropdownMenu() {
               <Button
                 variant="destructive"
                 onClick={() => {
-                  removeStudentDocuments([{ name: openDocument.name }]);
+                  remove(openDocument);
                   setOpenDocument(undefined);
                 }}
               >

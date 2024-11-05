@@ -22,7 +22,7 @@ export function useCelebration() {
 }
 
 export function CelebrationProvider(props: Props) {
-  const container = useRef<Container>(null);
+  const container = useRef<Container | undefined>(undefined);
 
   const options = useMemo(
     (): ISourceOptions => ({

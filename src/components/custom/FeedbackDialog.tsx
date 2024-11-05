@@ -13,9 +13,9 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Competency, Indicator } from "@/lib/types";
+import { competenciesWithIncidactors } from "@/lib/types";
 import { jsonToMarkdown } from "@/lib/utils";
-import { useFeedback } from "@/providers/FeedbackProvider";
+import { useFeedbackStore } from "@/stores/feedbackStore";
 import { format } from "date-fns";
 import { ArrowLeft, ArrowRight, Copy } from "lucide-react";
 import { useEffect, useMemo } from "react";
@@ -28,34 +28,29 @@ inherently flawed. The feedback is meant as an initial starting point
 for your reflection, please refer to a human for proper
 feedback and guidance.`;
 
-export function FeedbackDialog(props: {
-  competency: Competency;
-  indicator: Indicator;
-}) {
-  const { showFeedback, setFeedback, competenciesWithIncidactors } =
-    useFeedback();
+export function FeedbackDialog() {
+  const { selected, clear, show, get } = useFeedbackStore();
   const [, copy] = useCopyToClipboard();
 
   const mardownFeedback = useMemo(() => {
-    return jsonToMarkdown(props.indicator.feedback, ["grade", "metadata"]);
-  }, [props.indicator.feedback]);
+    return jsonToMarkdown(selected, ["grade", "metadata"]);
+  }, [selected?.feedback]);
 
   const [previousIndicator, nextIndicator] = useMemo(() => {
+    if (!selected) return [undefined, undefined];
+
     const currentCompetencyIndex = competenciesWithIncidactors.findIndex(
-      ({ name }) => name === props.competency,
+      ({ indicators }) =>
+        indicators.find(({ name }) => name === selected.metaData.indicator),
     );
 
-    if (currentCompetencyIndex < 0) {
-      return [undefined, undefined];
-    }
+    if (currentCompetencyIndex < 0) return [undefined, undefined];
 
     const currentIndicatorIndex = competenciesWithIncidactors[
       currentCompetencyIndex
-    ].indicators.findIndex(({ name }) => name === props.indicator.name);
+    ].indicators.findIndex(({ name }) => name === selected.metaData.indicator);
 
-    if (currentIndicatorIndex < 0) {
-      return [undefined, undefined];
-    }
+    if (currentIndicatorIndex < 0) return [undefined, undefined];
 
     const previousIndicatorWithinCompetency =
       competenciesWithIncidactors[currentCompetencyIndex].indicators[
@@ -93,14 +88,21 @@ export function FeedbackDialog(props: {
       firstIndicatorOfFirstCompetency;
 
     return [previousIndicator, nextIndicator];
-  }, [competenciesWithIncidactors, props.competency, props.indicator]);
+  }, [competenciesWithIncidactors, selected, get]);
+
+  const [previousFeedback, nextFeedback] = useMemo(() => {
+    if (!previousIndicator) return [null, null];
+    if (!nextIndicator) return [null, null];
+
+    return [get(previousIndicator.name), get(nextIndicator.name)];
+  }, [previousIndicator, nextIndicator]);
 
   useEffect(() => {
     const listener = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft" && !!previousIndicator?.feedback) {
-        showFeedback(previousIndicator);
-      } else if (e.key === "ArrowRight" && !!nextIndicator?.feedback) {
-        showFeedback(nextIndicator);
+      if (e.key === "ArrowLeft" && previousFeedback) {
+        show(previousFeedback);
+      } else if (e.key === "ArrowRight" && nextFeedback) {
+        show(nextFeedback);
       }
     };
 
@@ -109,25 +111,30 @@ export function FeedbackDialog(props: {
     return () => {
       window.removeEventListener("keydown", listener);
     };
-  }, [previousIndicator, nextIndicator]);
+  }, [previousFeedback, nextFeedback, get]);
 
+  if (!selected) return null;
+
+  console.log(previousIndicator, nextIndicator);
   return (
     <Dialog
-      defaultOpen
+      open={!!selected}
       onOpenChange={(open) => {
-        if (!open) showFeedback();
+        if (!open) show();
       }}
     >
       <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle className="flex space-x-4">
-            <CompetencyIconWithBackground competency={props.competency} />
+            <CompetencyIconWithBackground
+              competency={selected.metaData.competency}
+            />
             <div className="flex flex-col justify-between">
               <div className="text-2xl first-letter:capitalize">
-                {props.competency}
+                {selected.metaData.competency}
               </div>
               <span className="text-sm font-light text-muted-foreground">
-                {props.indicator.name}
+                {selected.metaData.indicator}
               </span>
             </div>
           </DialogTitle>
@@ -135,19 +142,20 @@ export function FeedbackDialog(props: {
         <DialogDescription>⚠️ {disclaimer}</DialogDescription>
         <section className="flex space-x-8">
           <section className="space-y-4">
-            <IndicatorGradeProgress grade={props.indicator.feedback?.grade} />
+            <IndicatorGradeProgress grade={selected.grade} />
             <Button
               variant="ghost"
-              disabled={!props.indicator.feedback}
-              onClick={() =>
-                setFeedback(props.competency, props.indicator.name)
-              }
+              disabled={!selected}
+              onClick={() => clear(selected)}
             >
               Regenerate feedback
             </Button>
           </section>
-          <ScrollArea className="max-h-[55vh] grow" key={props.indicator.name}>
-            {!props.indicator.feedback && (
+          <ScrollArea
+            className="max-h-[55vh] grow"
+            key={selected.metaData.indicator}
+          >
+            {!selected.feedback && (
               <section className="h-60">
                 <Skeleton className="w-36 h-7 mb-2" />
 
@@ -167,7 +175,7 @@ export function FeedbackDialog(props: {
               aria-label="Copy feedback to clipboard"
               variant="ghost"
               size="icon"
-              disabled={!props.indicator.feedback}
+              disabled={!selected.feedback}
               className="absolute right-0 top-0 z-50"
               onClick={async () => {
                 const isCopied = await copy(`========================
@@ -181,8 +189,8 @@ ${disclaimer}
 ========================
 🤖 Generated feedback 🤖
 
-${props.competency} - ${props.indicator.name}
-${props.indicator.feedback?.metaData.model?.name} matches you at a "${props.indicator.feedback?.grade}"
+${selected.metaData.competency} - ${selected.metaData.indicator}
+${selected.metaData.model?.name} matches you at a "${selected.grade}"
 
 🤖 Generated feedback 🤖
 ========================
@@ -197,12 +205,12 @@ Find more information on the [HvA website](https://www.hva.nl/bibliotheek/onders
 📝 How to cite 📝
 ========================
 # References
-Ollama. (${new Date().getFullYear()}). ${props.indicator.feedback?.metaData.model.name} (${format(props.indicator.feedback?.metaData.model.modified_at ?? new Date(), "MMM dd")} version)[Large Language Model]. Accessed on ${format(new Date(), "do MMM yyyy")}
+Ollama. (${new Date().getFullYear()}). ${selected.metaData.model.name} (${format(selected.metaData.model.modified_at ?? new Date(), "MMM dd")} version)[Large Language Model]. Accessed on ${format(new Date(), "do MMM yyyy")}
 
 ========================
 Generated using the following prompt
 ========================
-${props.indicator.feedback?.metaData.prompt}`);
+${selected.metaData.prompt}`);
                 if (isCopied) {
                   toast.success("Feedback copied to clipboard");
                 } else {
@@ -243,21 +251,17 @@ ${props.indicator.feedback?.metaData.prompt}`);
           </ScrollArea>
         </section>
         <div className="mt-3 italic text-muted-foreground text-center text-xs">
-          Ollama. ({new Date().getFullYear()}).{" "}
-          {props.indicator.feedback?.metaData.model.name} (
-          {format(
-            props.indicator.feedback?.metaData.model.modified_at ?? new Date(),
-            "MMM dd",
-          )}{" "}
+          Ollama. ({new Date().getFullYear()}). {selected.metaData.model.name} (
+          {format(selected.metaData.model.modified_at ?? new Date(), "MMM dd")}{" "}
           version)[Large Language Model]. Accessed on{" "}
           {format(new Date(), "do MMM yyyy")}
         </div>
         <DialogFooter className="grid grid-cols-2">
           <Button
             variant="outline"
-            disabled={!previousIndicator?.feedback}
+            disabled={!previousFeedback}
             onClick={() => {
-              showFeedback(previousIndicator);
+              previousFeedback && show(previousFeedback);
             }}
           >
             <ArrowLeft />
@@ -265,9 +269,9 @@ ${props.indicator.feedback?.metaData.prompt}`);
           </Button>
           <Button
             variant="outline"
-            disabled={!nextIndicator?.feedback}
+            disabled={!nextFeedback}
             onClick={() => {
-              showFeedback(nextIndicator);
+              nextFeedback && show(nextFeedback);
             }}
           >
             {nextIndicator?.name ?? "Next disciplinary"}
