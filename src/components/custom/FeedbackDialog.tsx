@@ -115,7 +115,6 @@ export function FeedbackDialog() {
 
   if (!selected) return null;
 
-  console.log(previousIndicator, nextIndicator);
   return (
     <Dialog
       open={!!selected}

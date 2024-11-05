@@ -60,8 +60,6 @@ export function LlmProvider(props: PropsWithChildren) {
       .sort(() => Math.random() - Math.random())
       .at(0);
 
-    console.log(item);
-
     if (!item) return;
 
     const competency = competenciesWithIncidactors.find(({ indicators }) =>
@@ -106,7 +104,7 @@ export function LlmProvider(props: PropsWithChildren) {
       add(data);
       queue.current.delete(indicator);
     } catch (error) {
-      console.log("Error processing queue", error);
+      console.log("Error getting feedback", error);
     } finally {
       processing.current = undefined;
     }
