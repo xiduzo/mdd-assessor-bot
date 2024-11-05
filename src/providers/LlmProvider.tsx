@@ -70,6 +70,7 @@ export function LlmProvider(props: PropsWithChildren) {
 
     const [indicator, { chat }] = item;
     processing.current = indicator;
+    console.log("Processing", competency, indicator);
 
     try {
       const llm = new Ollama({

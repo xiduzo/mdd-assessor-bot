@@ -1,6 +1,6 @@
 import {
   CompetencyIconWithBackground,
-  IndicatorGradeProgress,
+  IndicatorGradeProgress
 } from "@/components/custom/Indicator";
 import { Button } from "@/components/ui/button";
 import {
@@ -9,7 +9,7 @@ import {
   DialogDescription,
   DialogFooter,
   DialogHeader,
-  DialogTitle,
+  DialogTitle
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -204,7 +204,7 @@ Find more information on the [HvA website](https://www.hva.nl/bibliotheek/onders
 📝 How to cite 📝
 ========================
 # References
-Ollama. (${new Date().getFullYear()}). ${selected.metaData.model.name} (${format(selected.metaData.model.modified_at ?? new Date(), "MMM dd")} version)[Large Language Model]. Accessed on ${format(new Date(), "do MMM yyyy")}
+Ollama. (${format(selected.metaData.model.modified_at, "yyyy")}). ${selected.metaData.model.name} (${format(selected.metaData.model.modified_at ?? new Date(), "MMM dd")} version)[Large Language Model]. Accessed on ${format(new Date(), "do MMM yyyy")}
 
 ========================
 Generated using the following prompt
@@ -250,7 +250,7 @@ ${selected.metaData.prompt}`);
           </ScrollArea>
         </section>
         <div className="mt-3 italic text-muted-foreground text-center text-xs">
-          Ollama. ({new Date().getFullYear()}). {selected.metaData.model.name} (
+          Ollama. ({format(selected.metaData.model.modified_at, "yyyy")}). {selected.metaData.model.name} (
           {format(selected.metaData.model.modified_at ?? new Date(), "MMM dd")}{" "}
           version)[Large Language Model]. Accessed on{" "}
           {format(new Date(), "do MMM yyyy")}
