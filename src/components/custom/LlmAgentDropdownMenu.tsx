@@ -12,25 +12,23 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useLlm } from "@/providers/LlmProvider";
+import { useLlmStore } from "@/stores/llmStore";
 import { cva } from "class-variance-authority";
 import { Bird, Bot, BotOff, ExternalLink } from "lucide-react";
 
 export function LlmAgentDropdownMenu() {
-  const { models, model, setModel, status } = useLlm();
+  const { model, models, select } = useLlmStore();
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className={llmAgentButton({ status: status })}
+          className={llmAgentButton()}
           aria-label="Select your LLM assessor"
         >
-          {!status && <BotOff />}
-          {status === "error" && <BotOff />}
-          {status === "initializing" && <BotOff />}
-          {status === "initialized" && <Bot />}
+          {(!models || !model) && <BotOff />}
+          {model && <Bot />}
           {model?.name ?? "No LLM selected"}
         </Button>
       </DropdownMenuTrigger>
@@ -54,14 +52,14 @@ export function LlmAgentDropdownMenu() {
                   No models available on your device
                 </DropdownMenuItem>
               )}
-              {models.map(({ name }) => (
+              {models.map((_model) => (
                 <DropdownMenuCheckboxItem
-                  key={name}
-                  checked={name === model?.name}
-                  disabled={name === model?.name}
-                  onClick={() => setModel(name)}
+                  key={_model.name}
+                  checked={_model.name === model?.name}
+                  disabled={_model.name === model?.name}
+                  onClick={() => select(_model)}
                 >
-                  {name}
+                  {_model.name}
                 </DropdownMenuCheckboxItem>
               ))}
             </DropdownMenuSubContent>

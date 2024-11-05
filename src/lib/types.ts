@@ -5,6 +5,20 @@ export type IpcResponse<T> =
   | { success: true; data: T }
   | { success: false; error: string };
 
+export enum IPC_CHANNEL {
+  PDF_PARSE = "pdf-parse",
+  GET_MODELS = "get-models",
+  GET_FEEDBACK = "get-feedback",
+}
+
+export type IpcPdfParseRequest = {
+  fileData: ArrayBuffer;
+  fileName: string;
+};
+export type IpcPdfParseResponse = { text: string; fileName: string };
+
+export type IpcGetModelsResponse = ModelResponse[];
+
 export const grades = [
   "novice",
   "competent",
@@ -22,6 +36,16 @@ export const competencies = [
 ] as const;
 export type Competency = (typeof competencies)[number];
 
+const feedbackMetaData = z.object({
+  competency: z.enum(competencies),
+  indicator: z.string(),
+  date: z.date().default(new Date()),
+  model: z.custom<ModelResponse>(),
+  prompt: z.string(),
+});
+
+export type FeedbackMetaData = z.infer<typeof feedbackMetaData>;
+
 export const feedback = z
   .object({
     grade: z
@@ -30,11 +54,7 @@ export const feedback = z
       .refine((val) => grades.includes(val as Grade), {
         message: "Invalid enum value",
       }),
-    metaData: z.object({
-      date: z.date().default(new Date()),
-      model: z.custom<ModelResponse>(),
-      prompt: z.string(),
-    }),
+    metaData: feedbackMetaData,
   })
   .passthrough();
 
@@ -50,7 +70,6 @@ const indicator = z.object({
   description: z.string(),
   expectations: z.string().array(),
   grades: indicatorWithGrade.array(),
-  feedback: feedback.optional(),
 });
 export type Indicator = z.infer<typeof indicator>;
 

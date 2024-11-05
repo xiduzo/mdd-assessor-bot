@@ -1,7 +1,13 @@
-import { IpcResponse } from "@/lib/types";
+import {
+  IpcGetModelsResponse,
+  IpcPdfParseRequest,
+  IpcPdfParseResponse,
+  IpcResponse,
+  IPC_CHANNEL,
+} from "@/lib/types";
 import { app, BrowserWindow, ipcMain } from "electron";
 import Squirrel from "electron-squirrel-startup";
-import ollama, { ModelResponse } from "ollama";
+import ollama from "ollama";
 import path from "path";
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
@@ -65,37 +71,36 @@ app.on("activate", () => {
   }
 });
 
-type PdfParseResponse = IpcResponse<{ text: string; fileName: string }>;
-ipcMain.on("pdf-parse", (event, fileData, fileName) => {
-  const buffer = Buffer.from(fileData);
+ipcMain.on(IPC_CHANNEL.PDF_PARSE, (event, request: IpcPdfParseRequest) => {
+  const buffer = Buffer.from(request.fileData);
 
   let text = "";
   new PdfReader().parseBuffer(buffer, (error, item) => {
     if (error) {
-      const response: PdfParseResponse = {
+      const response: IpcResponse<IpcPdfParseResponse> = {
         success: false,
         error: error,
       };
 
-      event.reply("upload-file-response", response);
+      event.reply(IPC_CHANNEL.PDF_PARSE, response);
       return;
     }
 
     if (!item) {
       if (text === "") {
-        const response: PdfParseResponse = {
+        const response: IpcResponse<IpcPdfParseResponse> = {
           success: false,
           error: "File does not contain any text",
         };
-        event.reply("upload-file-response", response);
+        event.reply(IPC_CHANNEL.PDF_PARSE, response);
         return;
       }
 
-      const response: PdfParseResponse = {
+      const response: IpcResponse<IpcPdfParseResponse> = {
         success: true,
-        data: { text, fileName },
+        data: { text, fileName: request.fileName },
       };
-      event.reply("upload-file-response", response);
+      event.reply(IPC_CHANNEL.PDF_PARSE, response);
       return;
     }
 
@@ -106,20 +111,28 @@ ipcMain.on("pdf-parse", (event, fileData, fileName) => {
   });
 });
 
-type GetModelsResponse = IpcResponse<ModelResponse[]>;
-ipcMain.on("get-models", async (event) => {
+ipcMain.on(IPC_CHANNEL.GET_MODELS, async (event) => {
   try {
     const { models } = await ollama.list();
-    const response: GetModelsResponse = {
+    const response: IpcResponse<IpcGetModelsResponse> = {
       success: true,
       data: models,
     };
-    event.reply("models", response);
+    event.reply(IPC_CHANNEL.GET_MODELS, response);
   } catch {
-    const response: GetModelsResponse = {
+    const response: IpcResponse<IpcGetModelsResponse> = {
       success: false,
       error: "Unable to fetch models",
     };
-    event.reply("models", response);
+    event.reply(IPC_CHANNEL.GET_MODELS, response);
+  }
+});
+
+ipcMain.on(IPC_CHANNEL.GET_FEEDBACK, async (event) => {
+  try {
+    console.log("event", event);
+  } catch (error) {
+    console.log(error);
+    event.reply(IPC_CHANNEL.GET_FEEDBACK, {});
   }
 });

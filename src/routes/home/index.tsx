@@ -6,10 +6,15 @@ import FlickeringGrid from "@/components/ui/flickering-grid";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
+import {
+  IpcPdfParseRequest,
+  IpcPdfParseResponse,
+  IPC_CHANNEL,
+} from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useCelebration } from "@/providers/CelebrationProvider";
-import { useFeedback } from "@/providers/FeedbackProvider";
-import { useLlm } from "@/providers/LlmProvider";
+import { useDocumentStore } from "@/stores/documentStore";
+import { useFeedbackStore } from "@/stores/feedbackStore";
 import { useAutoAnimate } from "@formkit/auto-animate/react";
 import { cva, VariantProps } from "class-variance-authority";
 import {
@@ -36,8 +41,8 @@ export function HomeRoute() {
   );
   const { celebrate } = useCelebration();
 
-  const { documents, status } = useLlm();
-  const { clearFeedback } = useFeedback();
+  const { documents } = useDocumentStore();
+  const { clearAll } = useFeedbackStore();
   const navigate = useNavigate();
   const [files, setFiles] = useState<File[]>([]);
   const [active, setActive] = useState(false);
@@ -139,15 +144,13 @@ export function HomeRoute() {
       </article>
       <aside className="flex flex-col items-center space-y-10 left-0 absolute w-full bottom-4">
         <Button
-          disabled={
-            !documents.length || status !== "initialized" || !!files.length
-          }
+          disabled={!documents.length || !!files.length}
           onClick={() => {
             if (isFistTimeFeedback) {
               setIsFirstTimeFeedback(false);
               celebrate("That's the spirit, you'll be going places!");
             }
-            clearFeedback();
+            clearAll();
             navigate("/result");
           }}
         >
@@ -179,7 +182,7 @@ const dropArea = cva(
 );
 
 function FileUploader(props: { file: File; removeFile: (file: File) => void }) {
-  const { addStudentDocuments } = useLlm();
+  const { add } = useDocumentStore();
 
   const [progress, setProgress] = useState(0);
   const [uploadState, setUploadState] =
@@ -199,12 +202,23 @@ function FileUploader(props: { file: File; removeFile: (file: File) => void }) {
     const reader = new FileReader();
     reader.onload = function (event) {
       const fileData = event.target?.result;
-      window.electron.ipcRenderer.send("pdf-parse", fileData, props.file.name);
+      if (!fileData) {
+        toast.warning(props.file.name, {
+          description: "No data found in the file",
+        });
+        setUploadState("error");
+        return;
+      }
+
+      window.electron.ipcRenderer.send<IpcPdfParseRequest>(
+        IPC_CHANNEL.PDF_PARSE,
+        { fileData: fileData as ArrayBuffer, fileName: props.file.name },
+      );
     };
     reader.readAsArrayBuffer(props.file);
 
-    return window.electron.ipcRenderer.on<{ text: string; fileName: string }>(
-      "upload-file-response",
+    return window.electron.ipcRenderer.on<IpcPdfParseResponse>(
+      IPC_CHANNEL.PDF_PARSE,
       async (response) => {
         if (!response.success) {
           toast.warning(props.file.name, {
@@ -232,18 +246,16 @@ function FileUploader(props: { file: File; removeFile: (file: File) => void }) {
         setTimeout(() => {
           setUploadState("success");
         }, 300);
-        addStudentDocuments([
-          {
-            name: props.file.name,
-            lastModified: props.file.lastModified,
-            text: response.data.text,
-          },
-        ]);
+        add({
+          name: props.file.name,
+          lastModified: props.file.lastModified,
+          text: response.data.text,
+        });
         await new Promise((resolve) => setTimeout(resolve, 3000));
         props.removeFile(props.file);
       },
     );
-  }, [props.file, props.removeFile]);
+  }, [props.file, props.removeFile, add]);
 
   return (
     <Card className={fileUploaderCard({ uploadState })}>

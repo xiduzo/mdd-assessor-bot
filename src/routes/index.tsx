@@ -1,6 +1,7 @@
 import { LlmAgentDropdownMenu } from "@/components/custom/LlmAgentDropdownMenu";
 import { MyDocumentsDropdownMenu } from "@/components/custom/MyDocumentsDropdownMenu";
 import { Button } from "@/components/ui/button";
+import { useLlm } from "@/providers/LlmProvider";
 import { ArrowLeft } from "lucide-react";
 import { PropsWithChildren } from "react";
 import {
@@ -41,6 +42,7 @@ export function Router() {
 function Layout(props: PropsWithChildren) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { clear } = useLlm();
 
   return (
     <main className="min-h-lvh flex flex-col">
@@ -50,7 +52,10 @@ function Layout(props: PropsWithChildren) {
           variant="ghost"
           size="icon"
           disabled={location.pathname === "/"}
-          onClick={() => navigate(-1)}
+          onClick={() => {
+            clear();
+            navigate(-1);
+          }}
         >
           {location.pathname !== "/" && <ArrowLeft />}
         </Button>

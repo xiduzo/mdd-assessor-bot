@@ -16,20 +16,26 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Competency, CompetencyWithIndicators, Indicator } from "@/lib/types";
-import { useFeedback } from "@/providers/FeedbackProvider";
+import {
+  competenciesWithIncidactors,
+  CompetencyWithIndicators,
+  Indicator,
+} from "@/lib/types";
 import { useLlm } from "@/providers/LlmProvider";
+import { useDocumentStore } from "@/stores/documentStore";
+import { useFeedbackStore } from "@/stores/feedbackStore";
 import { RotateCcw } from "lucide-react";
 import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { useShallow } from "zustand/react/shallow";
 
 export function ResultRoute() {
-  const { documents, status } = useLlm();
+  const { documents } = useDocumentStore();
   const navigate = useNavigate();
   const previousDocumentsLength = useRef(documents.length);
 
-  const { competenciesWithIncidactors, clearFeedback } = useFeedback();
+  const { clearAll } = useFeedbackStore();
 
   useEffect(() => {
     if (!documents.length) {
@@ -43,14 +49,15 @@ export function ResultRoute() {
         duration: 10_000,
         action: {
           label: "Clear all feedback",
-          onClick: () => clearFeedback(),
+          onClick: () => clearAll(),
         },
       });
       previousDocumentsLength.current = documents.length;
     }
 
     previousDocumentsLength.current = documents.length;
-  }, [documents, navigate, clearFeedback]);
+  }, [documents, navigate, clearAll]);
+
   return (
     <article>
       <Card>
@@ -62,10 +69,10 @@ export function ResultRoute() {
                 <TooltipTrigger asChild>
                   <Button
                     aria-label="Clear all feedback"
-                    disabled={!documents.length && status === "initialized"}
+                    disabled={!documents.length}
                     variant="ghost"
                     size="icon"
-                    onClick={() => clearFeedback()}
+                    onClick={() => clearAll()}
                   >
                     <RotateCcw />
                   </Button>
@@ -76,8 +83,13 @@ export function ResultRoute() {
               </Tooltip>
             </TooltipProvider>
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="space-x-2">
             <em>/ˈfiːd.bæk/</em>
+            <span>
+              information given to guide future behavior, improve performance,
+              or enhance understanding, provided by various sources like
+              teachers, peers, or experiences.
+            </span>
           </CardDescription>
         </CardHeader>
         <CardContent className="grid lg:grid-cols-2 grid-cols-1 lg:gap-10 gap-8">
@@ -113,11 +125,7 @@ function CompetencyResult(props: {
           aria-label={`Feedback for ${props.competencyWithIndicators.name} indicators`}
         >
           {props.competencyWithIndicators.indicators.map((indicator) => (
-            <CompetencyIndicator
-              key={indicator.name}
-              indicator={indicator}
-              competency={props.competencyWithIndicators.name}
-            />
+            <CompetencyIndicator key={indicator.name} indicator={indicator} />
           ))}
         </ol>
       </div>
@@ -125,20 +133,23 @@ function CompetencyResult(props: {
   );
 }
 
-function CompetencyIndicator(props: {
-  indicator: Indicator;
-  competency: Competency;
-}) {
-  const { showFeedback } = useFeedback();
+function CompetencyIndicator(props: { indicator: Indicator }) {
+  const feedback = useFeedbackStore(
+    useShallow((store) =>
+      store.feedback.find(
+        (feedback) => feedback.metaData.indicator === props.indicator.name,
+      ),
+    ),
+  );
+  const { show } = useFeedbackStore();
 
-  const { getGrading, status } = useLlm();
+  const { getGrading } = useLlm();
 
   useEffect(() => {
-    if (status !== "initialized") return;
-    if (props.indicator.feedback) return;
+    if (feedback) return;
 
-    getGrading(props.competency, props.indicator.name);
-  }, [props.indicator.feedback, props.competency, status, getGrading]);
+    getGrading(props.indicator);
+  }, [feedback, props.indicator, getGrading]);
 
   return (
     <li
@@ -149,11 +160,11 @@ function CompetencyIndicator(props: {
       <h3 className="flex-grow" aria-hidden>
         {props.indicator.name}
       </h3>
-      <IndicatorGradeProgress grade={props.indicator.feedback?.grade} />
+      <IndicatorGradeProgress grade={feedback?.grade} />
       <Button
         variant="link"
-        disabled={!props.indicator.feedback}
-        onClick={() => showFeedback(props.indicator)}
+        disabled={!feedback}
+        onClick={() => show(feedback)}
         aria-label={`Read feedback for ${props.indicator.name}`}
       >
         Read feedback
