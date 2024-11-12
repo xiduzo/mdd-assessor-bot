@@ -5,30 +5,32 @@ import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
 import { IpcResponse, IPC_CHANNEL } from "./lib/types";
 
 export const electronHandler = {
-  ipcRenderer: {
-    send<Data>(channel: IPC_CHANNEL, data?: Data) {
-      ipcRenderer.send(channel, data);
-    },
-    on<Data>(
-      channel: IPC_CHANNEL,
-      callback: (response: IpcResponse<Data>) => void,
-    ): () => void {
-      const listner = (_event: IpcRendererEvent, response: IpcResponse<Data>) =>
-        callback(response);
+    ipcRenderer: {
+        send<Data>(channel: IPC_CHANNEL, data?: Data) {
+            ipcRenderer.send(channel, data);
+        },
+        on<Data>(
+            channel: IPC_CHANNEL,
+            callback: (response: IpcResponse<Data>) => void,
+        ): () => void {
+            const listner = (
+                _event: IpcRendererEvent,
+                response: IpcResponse<Data>,
+            ) => callback(response);
 
-      ipcRenderer.on(channel, listner);
+            ipcRenderer.on(channel, listner);
 
-      return () => {
-        ipcRenderer.removeListener(channel, listner);
-      };
+            return () => {
+                ipcRenderer.removeListener(channel, listner);
+            };
+        },
+        once<Data>(
+            channel: IPC_CHANNEL,
+            callback: (response: IpcResponse<Data>) => void,
+        ) {
+            ipcRenderer.once(channel, (_event, args) => callback(args));
+        },
     },
-    once<Data>(
-      channel: IPC_CHANNEL,
-      callback: (response: IpcResponse<Data>) => void,
-    ) {
-      ipcRenderer.once(channel, (_event, args) => callback(args));
-    },
-  },
 };
 
 contextBridge.exposeInMainWorld("electron", electronHandler);
