@@ -2,6 +2,15 @@ import { ParrotHead } from "@/components/custom/ParrotHead";
 import AnimatedGridPattern from "@/components/ui/animated-grid-pattern";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "@/components/ui/dialog";
 import FlickeringGrid from "@/components/ui/flickering-grid";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +49,7 @@ export function HomeRoute() {
         "first-time-feedback",
         true,
     );
+
     const { celebrate } = useCelebration();
     const { models } = useLlmStore();
 
@@ -53,6 +63,15 @@ export function HomeRoute() {
     const removeFile = useCallback(({ name }: File) => {
         setFiles((prev) => prev.filter((file) => file.name !== name));
     }, []);
+
+    function getFeedback() {
+        if (isFistTimeFeedback) {
+            setIsFirstTimeFeedback(false);
+            celebrate("That's the spirit, you'll be going places!");
+        }
+        clearAll();
+        navigate("/result");
+    }
 
     return (
         <>
@@ -154,26 +173,100 @@ export function HomeRoute() {
                 </section>
             </article>
             <aside className="flex flex-col items-center space-y-10 left-0 absolute w-full bottom-4">
-                <Button
-                    disabled={
-                        !documents.length || !!files.length || !models.length
-                    }
-                    onClick={() => {
-                        if (isFistTimeFeedback) {
-                            setIsFirstTimeFeedback(false);
-                            celebrate(
-                                "That's the spirit, you'll be going places!",
-                            );
-                        }
-                        clearAll();
-                        navigate("/result");
-                    }}
-                >
-                    {!documents.length &&
-                        "Upload documents to receive feedback"}
-                    {!!documents.length && <Sparkles aria-hidden />}
-                    {!!documents.length && "I want feedback"}
-                </Button>
+                <Dialog>
+                    <DialogTrigger asChild>
+                        <Button
+                            disabled={
+                                !documents.length ||
+                                !!files.length ||
+                                !models.length
+                            }
+                        >
+                            {!documents.length &&
+                                "Upload documents to receive feedback"}
+                            {!!documents.length && <Sparkles aria-hidden />}
+                            {!!documents.length && "I want feedback"}
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="max-w-screen-lg">
+                        <DialogHeader>
+                            <DialogTitle>⚠️ Disclaimer ⚠️</DialogTitle>
+                            <DialogDescription>
+                                Before receiving feedback, please read the
+                                following part carefully
+                            </DialogDescription>
+                        </DialogHeader>
+
+                        <ol className="list-decimal list-inside space-y-1">
+                            <li>
+                                This tool is not meant to give you any
+                                orientation on your actual future grading with
+                                an assessment committee, this tool is only
+                                provided as an experiment on using LLMs for the
+                                writing process of MDD submissions.
+                            </li>
+                            <li>
+                                It checks your writing against the set of
+                                indicators, as interpreted by an LLM.
+                            </li>
+                            <li>
+                                We think LLMs can be very useful as writing aids{" "}
+                                <strong>if used well</strong>
+                            </li>
+                            <li>
+                                The grades and feedback that you get from this
+                                tool will likely differ greatly from what your
+                                human assessors will do
+                            </li>
+                            <li>
+                                Remember that LLMs cannot tell good from bad
+                                design and cannot "understand" your rationale,
+                                it only seems like they do because the can
+                                respond eloquently in your own language
+                            </li>
+                            <li>
+                                LLMs can not reason (
+                                <a
+                                    target="_blank"
+                                    className="text-blue-500 underline"
+                                    href="https://arstechnica.com/ai/2024/10/llms-cant-perform-genuine-logical-reasoning-apple-researchers-suggest/"
+                                >
+                                    source
+                                </a>
+                                ), and they can also not "see" the images in
+                                your portfolio, so their assessment is very
+                                partial and might differ from what your human
+                                assessors will do
+                            </li>
+                            <li>
+                                This tool is aimed to be a fun experiment on how
+                                to use LLMs for this purpose, and as an aid to
+                                check as you make progress on your documents for
+                                the assessment, we think it can be helpful in
+                                making sure that there are no obvious omissions
+                                for certain indicators for example.
+                            </li>
+                            <li>
+                                This tool will not upload your assessment
+                                documents to any cloud service before running
+                                them through an LLM. A local LLM is used via
+                                Ollama, so it is safe to use for potentially
+                                sensitive intellectual property materials.
+                            </li>
+                            <li>
+                                Your documents are not deleted after the report
+                                is given.
+                            </li>
+                        </ol>
+                        <DialogFooter>
+                            <Button variant="destructive" onClick={getFeedback}>
+                                I have read the disclaimer and understand it,
+                                give me feedback now
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
                 <a
                     href="https://sanderboer.nl"
                     target="_blank"
