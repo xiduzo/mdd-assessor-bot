@@ -267,13 +267,24 @@ export function HomeRoute() {
                     </DialogContent>
                 </Dialog>
 
-                <a
-                    href="https://sanderboer.nl"
-                    target="_blank"
-                    className="text-muted-foreground text-xs hover:underline"
-                >
-                    Made with ♥️ by xiduzo
-                </a>
+                <div className="flex flex-col text-center gap-2">
+                    <div className="flex text-muted-foreground gap-1">
+                        <span>Concept and design by</span>
+                        <ul className="flex gap-1">
+                            <li>Jaap Hulst,</li>
+                            <li>Niloo Zabardast</li>
+                            <li>and Elena Mihai</li>
+                        </ul>
+                    </div>
+
+                    <a
+                        href="https://sanderboer.nl"
+                        target="_blank"
+                        className="text-muted-foreground text-xs hover:underline"
+                    >
+                        Made with ♥️ by xiduzo
+                    </a>
+                </div>
             </aside>
         </>
     );
