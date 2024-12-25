@@ -21,4 +21,4 @@ This repository contains the `MDD assessor bot`, a LLM experiment for providing 
 
 ---
 
-Concept and design by Jaap Hulst, Niloo Zabardast and Elena Mihai
+Concept and design by [Jaap Hulst](https://www.studio-joop.nl), [Niloo Zabardast](https://www.linkedin.com/in/niloofarzabardast) and Elena Mihai

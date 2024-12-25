@@ -1,4 +1,4 @@
-import { ParrotHead } from "@/components/custom/ParrotHead";
+import { Logo } from "@/components/custom/Logo";
 import AnimatedGridPattern from "@/components/ui/animated-grid-pattern";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -77,7 +77,7 @@ export function HomeRoute() {
         <>
             <article className="text-center flex flex-col space-y-12">
                 <header className="flex flex-col items-center">
-                    <ParrotHead className="w-40 h-40" />
+                    <Logo className="w-60 h-60 [mask-image:linear-gradient(to_bottom,white,white,white,white,white,transparent)]" />
                     <h1 className="font-semibold text-4xl">
                         Let's review your documents 👀
                     </h1>
@@ -271,8 +271,26 @@ export function HomeRoute() {
                     <div className="flex text-muted-foreground gap-1">
                         <span>Concept and design by</span>
                         <ul className="flex gap-1">
-                            <li>Jaap Hulst,</li>
-                            <li>Niloo Zabardast</li>
+                            <li>
+                                <a
+                                    href="https://www.studio-joop.nl"
+                                    target="_blank"
+                                    className="hover:underline"
+                                >
+                                    Jaap Hulst
+                                </a>
+                                ,
+                            </li>
+                            <li>
+                                <a
+                                    href="https://www.linkedin.com/in/niloofarzabardast"
+                                    target="_blank"
+                                    className="hover:underline"
+                                >
+                                    Niloo Zabardast
+                                </a>
+                                ,
+                            </li>
                             <li>and Elena Mihai</li>
                         </ul>
                     </div>
