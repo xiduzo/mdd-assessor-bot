@@ -291,7 +291,16 @@ export function HomeRoute() {
                                 </a>
                                 ,
                             </li>
-                            <li>and Elena Mihai</li>
+                            <li>
+                                and{" "}
+                                <a
+                                    href="https://www.linkedin.com/in/elena-mihai"
+                                    target="_blank"
+                                    className="hover:underline"
+                                >
+                                    Elena Mihai
+                                </a>
+                            </li>
                         </ul>
                     </div>
 
